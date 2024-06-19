@@ -1,46 +1,26 @@
-use iced::{button, Button, Column, Element, Sandbox, Settings, Text};
+use qmetaobject::*;
+use std::rc::Rc;
 
-#[derive(Default)]
-struct HelloWorld {
-    button: button::State,
-    message: String,
-}
+// Define the QmlEngine and register the QML code
+fn main() {
 
-#[derive(Debug, Clone)]
-enum Message {
-    ButtonPressed,
-}
-
-impl Sandbox for HelloWorld {
-    type Message = Message;
-
-    fn new() -> Self {
-        Self::default()
-    }
-
-    fn title(&self) -> String {
-        String::from("Hello Iced")
-    }
-
-    fn update(&mut self, message: Message) {
-        match message {
-            Message::ButtonPressed => {
-                self.message = String::from("Hello, world!");
+    let mut engine = QmlEngine::new();
+    engine.load_data("
+        import QtQuick 2.0;
+        import QtQuick.Controls 2.0;
+        ApplicationWindow {
+            visible: true;
+            width: 640;
+            height: 480;
+            title: qsTr(\"Hello World\");
+            Button {
+                text: qsTr(\"Press me\");
+                anchors.centerIn: parent;
+                onClicked: {
+                    console.log(\"Button pressed!\");
+                }
             }
         }
-    }
-
-    fn view(&mut self) -> Element<Message> {
-        Column::new()
-            .push(
-                Button::new(&mut self.button, Text::new("Press me"))
-                    .on_press(Message::ButtonPressed),
-            )
-            .push(Text::new(&self.message))
-            .into()
-    }
-}
-
-fn main() {
-    HelloWorld::run(Settings::default());
+    ".into());
+    engine.exec();
 }
