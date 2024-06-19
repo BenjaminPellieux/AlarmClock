@@ -1,18 +1,9 @@
 use std::time::{SystemTime, UNIX_EPOCH};
+use std::rc::Rc;
+use std::cell::RefCell;
 
-// Define the model for the alarm clock
-#[derive(QObject, Default)]
-struct AlarmClock {
-    base: qt_base_class!(trait QObject),
-    alarms: qt_property!(Vec<Alarm>),
-    current_time: qt_property!(String),
-    #[qt_signal]
-    alarms_updated: Signal<()>,
-    #[qt_signal]
-    time_updated: Signal<()>,
-}
 
-#[derive(Default)]
+
 struct Alarm {
     hour: u8,
     minute: u8,
@@ -22,4 +13,55 @@ struct Alarm {
     song_path: String,
     id: u32,
     status: bool,
+}
+
+
+pub struct AlarmClock {
+    alarms: RefCell<Vec<Alarm>>,
+    current_time: RefCell<String>,
+}
+
+impl AlarmClock {
+    pub fn new() -> () {
+        alarms = RefCell::new(Vec::new());
+        current_time = RefCell::new(Self::get_current_time());
+    }
+
+    fn get_current_time() -> String {
+        let start = SystemTime::now();
+        let since_the_epoch = start.duration_since(UNIX_EPOCH)
+            .expect("Time went backwards");
+        let in_seconds = since_the_epoch.as_secs();
+        let local_time = chrono::NaiveDateTime::from_timestamp(in_seconds as i64, 0);
+        local_time.format("%H:%M:%S").to_string()
+    }
+
+    fn update_time(&self) {
+        *self.current_time.borrow_mut() = Self::get_current_time();
+    }
+
+    fn add_alarm(&self, hour: u8, minute: u8, second: u8, is_radio: bool, audio_link: String, song_path: String) {
+        let id = self.alarms.borrow().len() as u32;
+        let alarm = Alarm {
+            hour,
+            minute,
+            second,
+            is_radio,
+            audio_link,
+            song_path,
+            id,
+            status: false,
+        };
+        self.alarms.borrow_mut().push(alarm);
+    }
+
+    fn remove_alarm(&self, id: u32) {
+        self.alarms.borrow_mut().retain(|alarm| alarm.id != id);
+    }
+
+    fn toggle_alarm_status(&self, id: u32) {
+        if let Some(alarm) = self.alarms.borrow_mut().iter_mut().find(|alarm| alarm.id == id) {
+            alarm.status = !alarm.status;
+        }
+    }
 }
