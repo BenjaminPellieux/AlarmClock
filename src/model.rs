@@ -3,28 +3,28 @@ use std::rc::Rc;
 use std::cell::RefCell;
 
 
-
-struct Alarm {
-    hour: u8,
-    minute: u8,
-    second: u8,
-    is_radio: bool,
-    audio_link: String,
-    song_path: String,
-    id: u32,
-    status: bool,
+pub struct Alarm {
+    pub hour: u8,
+    pub minute: u8,
+    pub second: u8,
+    pub is_radio: bool,
+    pub audio_link: String,
+    pub song_path: String,
+    pub id: u32,
+    pub status: bool,
 }
 
-
 pub struct AlarmClock {
-    alarms: RefCell<Vec<Alarm>>,
+    pub alarms: RefCell<Vec<Alarm>>,
     current_time: RefCell<String>,
 }
 
 impl AlarmClock {
-    pub fn new() -> () {
-        alarms = RefCell::new(Vec::new());
-        current_time = RefCell::new(Self::get_current_time());
+    pub fn new() -> Rc<Self> {
+        Rc::new(AlarmClock {
+            alarms: RefCell::new(Vec::new()),
+            current_time: RefCell::new(Self::get_current_time()),
+        })
     }
 
     fn get_current_time() -> String {
