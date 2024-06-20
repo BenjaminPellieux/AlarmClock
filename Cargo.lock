@@ -506,6 +506,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "qt_core",
+ "qt_gui",
  "qt_widgets",
 ]
 
