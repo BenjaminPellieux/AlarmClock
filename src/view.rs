@@ -92,24 +92,31 @@ impl MyView {
             parent,
         }));
 
+        println!("==> [INFO ADD UI context]");
         view.borrow().add_ui_context();
+        println!("==> [INFO ADD UI NEW ALARM FIELD]");
         view.borrow().add_ui_new_alarm_field();
+        println!("==> [INFO ADD UI LAYOUT]");
         view.borrow().add_ui_layout();
         let tmp_view: Rc<RefCell<MyView>> = Rc::clone(&view);
+        println!("==> [INFO ADD UI CONTROL]");
         view.borrow().add_ui_control(tmp_view);
+        println!("==> [END] <==");
         view
     }
 
-    unsafe fn add_ui_context(&self) {
+    unsafe fn add_ui_context(&self) -> () {
         println!("[INFO ADD UI context]");
         // self.widgets.p_lcd_heure.set_segment_style(qt_core::q_enum::QLCDNumberSegmentStyle::Flat);
         // self.widgets.p_lcd_min.set_segment_style(qt_core::q_enum::QLCDNumberSegmentStyle::Flat);
         // self.widgets.p_lcd_sec.set_segment_style(qt_core::q_enum::QLCDNumberSegmentStyle::Flat);
+
     }
 
-    unsafe fn add_ui_layout(&self) {
-        let window = QWidget::new_0a();
-        let layout = QVBoxLayout::new_1a(&window);
+    unsafe fn add_ui_layout(&self) -> () {
+        println!("[INFO ADD UI LAYOUT]");
+        let window: QBox<QWidget> = QWidget::new_0a();
+        let layout: QBox<QVBoxLayout> = QVBoxLayout::new_1a(&window);
         layout.add_widget(&self.widgets.p_lcd_heure);
         layout.add_widget(&self.widgets.p_lcd_min);
         layout.add_widget(&self.widgets.p_lcd_sec);
@@ -129,74 +136,90 @@ impl MyView {
         window.show();
     }
 
-    unsafe fn add_ui_control(&self, view: Rc<RefCell<Self>>) {
+    unsafe fn add_ui_control(&self, view: Rc<RefCell<Self>>) -> () {
 
-
+        println!("[INFO ADD UI CONTROL]");
         let parent: &QBox<QObject> = &self.parent;
+        println!("[INFO ADD UI CONTROL] ~PARENT~");
 
         let view_clone: Rc<RefCell<MyView>> = Rc::clone(&view);
+        println!("[INFO ADD UI CONTROL] ~view_clone~");
         let on_radio_clicked_1: QBox<SlotNoArgs> = SlotNoArgs::new(parent, move || {
             view_clone.borrow_mut().on_radio_clicked(1);
         });
-        self.widgets.p_rad_b1.clicked().connect(&on_radio_clicked_1);
 
+        println!("[INFO ADD UI CONTROL] ~on_radio_clicked_1~");
+        self.widgets.p_rad_b1.clicked().connect(&on_radio_clicked_1);
+        println!("[INFO ADD UI CONTROL] >> on_radio_clicked 1");
+
+        
         let view_clone: Rc<RefCell<MyView>> = Rc::clone(&view);
         let on_radio_clicked_2: QBox<SlotNoArgs> = SlotNoArgs::new(parent, move || {
             view_clone.borrow_mut().on_radio_clicked(2);
         });
         self.widgets.p_rad_b2.clicked().connect(&on_radio_clicked_2);
+        println!("[INFO ADD UI CONTROL] >> on_radio_clicked 2");
 
         let view_clone: Rc<RefCell<MyView>> = Rc::clone(&view);
         let on_radio_clicked_3: QBox<SlotNoArgs> = SlotNoArgs::new(parent, move || {
             view_clone.borrow_mut().on_radio_clicked(3);
         });
         self.widgets.p_rad_b3.clicked().connect(&on_radio_clicked_3);
+        println!("[INFO ADD UI CONTROL] >> on_radio_clicked 3");
 
         let view_clone: Rc<RefCell<MyView>> = Rc::clone(&view);
         let on_radio_clicked_4: QBox<SlotNoArgs> = SlotNoArgs::new(parent, move || {
             view_clone.borrow_mut().on_radio_clicked(4);
         });
         self.widgets.p_rad_b4.clicked().connect(&on_radio_clicked_4);
+        println!("[INFO ADD UI CONTROL] >> on_radio_clicked 4");
 
         let view_clone: Rc<RefCell<MyView>> = Rc::clone(&view);
         let on_radio_clicked_5: QBox<SlotNoArgs> = SlotNoArgs::new(parent, move || {
             view_clone.borrow_mut().on_radio_clicked(5);
         });
         self.widgets.p_rad_b5.clicked().connect(&on_radio_clicked_5);
+        println!("[INFO ADD UI CONTROL] >> on_radio_clicked 5");
 
         let view_clone: Rc<RefCell<MyView>> = Rc::clone(&view);
         let on_marche_clicked: QBox<SlotNoArgs> = SlotNoArgs::new(parent, move || {
             view_clone.borrow_mut().on_marche_clicked();
         });
         self.widgets.p_button_marche.clicked().connect(&on_marche_clicked);
+        println!("[INFO ADD UI CONTROL] >> on_marche_clicked");
 
         let view_clone: Rc<RefCell<MyView>> = Rc::clone(&view);
         let on_new_alarm_clicked: QBox<SlotNoArgs> = SlotNoArgs::new(parent, move || {
             view_clone.borrow_mut().on_new_alarm_clicked();
         });
         self.widgets.p_button_add_alarm_clock.clicked().connect(&on_new_alarm_clicked);
+        println!("[INFO ADD UI CONTROL] >> on_new_alarm_clicked");
 
         let view_clone: Rc<RefCell<MyView>> = Rc::clone(&view);
         let on_arret_clicked: QBox<SlotNoArgs> = SlotNoArgs::new(parent, move || {
             view_clone.borrow_mut().on_arret_clicked();
         });
         self.widgets.p_button_arret.clicked().connect(&on_arret_clicked);
+        println!("[INFO ADD UI CONTROL] >> on_arret_clicked");
 
         let view_clone: Rc<RefCell<MyView>> = Rc::clone(&view);
         let on_cancel_clicked: QBox<SlotNoArgs> = SlotNoArgs::new(parent, move || {
             view_clone.borrow_mut().on_cancel_clicked();
         });
         self.widgets.p_cancel.clicked().connect(&on_cancel_clicked);
+        println!("[INFO ADD UI CONTROL] >> on_cancel_clicked");
 
         let view_clone: Rc<RefCell<MyView>> = Rc::clone(&view);
         let on_save_clicked: QBox<SlotNoArgs> = SlotNoArgs::new(parent, move || {
             view_clone.borrow_mut().on_save_clicked();
         });
         self.widgets.p_save.clicked().connect(&on_save_clicked);
+        println!("[INFO ADD UI CONTROL] >> on_save_clicked");
     }
 
 
-    unsafe fn add_ui_new_alarm_field(&self) {
+    unsafe fn add_ui_new_alarm_field(&self) -> () {
+        println!("[INFO ADD UI NEW ALARM FIELD]");
         self.widgets.s_heur_box.set_range(0, 23);
         self.widgets.s_min_box.set_range(0, 59);
         self.widgets.s_sec_box.set_range(0, 59);
@@ -213,13 +236,13 @@ impl MyView {
         self.widgets.p_hbox_reveil.add_widget(&self.widgets.p_save);
     }
 
-    fn on_radio_clicked(&mut self, id: u8) {
+    fn on_radio_clicked(&mut self, id: u8) -> () {
         println!("Radio clicked {}", id);
         self.current_radio = id;
         // self.radio_player.set_media(QUrl::from_q_string(&qs(self.myradio_url[id as usize - 1])));
     }
 
-    fn on_marche_clicked(&self) {
+    fn on_marche_clicked(&self) -> () {
         // println!("[INFO] radio URL : {:?}", self.radio_player.is_audio_available());
         // if !self.radio_player.is_audio_available() {
         //     QMessageBox::information_2a(&self.widgets.g_alarm_clock, &qs("Radio"), &qs("Aucune radio selectionnée"));
@@ -229,7 +252,7 @@ impl MyView {
         println!("[DEBUG] on_marche_clicked");
     }
 
-    unsafe fn on_cancel_clicked(&self) {
+    unsafe fn on_cancel_clicked(&self) -> () {
         self.widgets.g_alarm_clock.hide();
         self.widgets.s_heur_box.set_value(0);
         self.widgets.s_min_box.set_value(0);
@@ -237,16 +260,16 @@ impl MyView {
         self.widgets.i_song_link.set_text(&qs(""));
     }
 
-    fn on_status_alarm_changed(&self, alarm: &mut AlarmClock) {
+    fn on_status_alarm_changed(&self, alarm: &mut AlarmClock) -> () {
         alarm.status = !alarm.status;
     }
 
-    unsafe fn on_delete_alarm_clicked(&mut self, alarm: &AlarmClock) {
+    unsafe fn on_delete_alarm_clicked(&mut self, alarm: &AlarmClock)-> () {
         self.alarm_clock_list.retain(|a| a.id != alarm.id);
         self.add_ui_alarm_clock();
     }
 
-    unsafe fn on_save_clicked(&mut self) {
+    unsafe fn on_save_clicked(&mut self) -> () {
         let h = self.widgets.s_heur_box.value();
         let m = self.widgets.s_min_box.value();
         let s = self.widgets.s_sec_box.value();
@@ -271,12 +294,13 @@ impl MyView {
         self.widgets.g_alarm_clock.show()
     }
 
-    fn on_arret_clicked(&self) {
+    fn on_arret_clicked(&self) -> () {
         // self.radio_player.pause();
         println!("[DEBUG] Player pause");
     }
 
     pub unsafe fn update(&self) -> () {
+        println!("[DEBUG] [UPDATE]");
         self.heure_act.borrow_mut().update_time();
         self.widgets.p_lcd_heure.display_int(self.heure_act.borrow().hour as i32);
         self.widgets.p_lcd_min.display_int(self.heure_act.borrow().minute as i32);
@@ -300,8 +324,8 @@ impl MyView {
             g_alarm_clock_tab.delete_later();
         }
 
-        let g_alarm_clock_tab = QGroupBox::from_q_string(&qs("Alarmes Sauvegardées"));
-        let p_alarm_clock_layout = QVBoxLayout::new_0a();
+        let g_alarm_clock_tab: QBox<QGroupBox> = QGroupBox::from_q_string(&qs("Alarmes Sauvegardées"));
+        let p_alarm_clock_layout: QBox<QVBoxLayout> = QVBoxLayout::new_0a();
 
         for alarm in &self.alarm_clock_list {
             let alarm_item_layout: QBox<QHBoxLayout> = QHBoxLayout::new_0a();
@@ -321,7 +345,7 @@ impl MyView {
 
             check_box_enable.set_checked(alarm.status);
 
-            let p_button_del_alarm = QPushButton::from_q_string(&qs("Supprimer"));
+            let p_button_del_alarm: QBox<QPushButton> = QPushButton::from_q_string(&qs("Supprimer"));
             // p_button_del_alarm.clicked().connect(&SlotNoArgs::new(self, move || {
             //     self.on_delete_alarm_clicked(alarm);
             // }));
