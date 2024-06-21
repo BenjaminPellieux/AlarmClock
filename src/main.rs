@@ -1,18 +1,34 @@
-mod view;
-mod model;
-
-
-use qt_widgets::QApplication;
-use std::rc::Rc;
-use std::cell::RefCell;
-
-
+use gtk::prelude::*;
+use gtk::{Button, Window, WindowType};
 
 fn main() {
-    QApplication::init(|_| unsafe {
-        println!("==> [MAIN] <==");
-        let view: Rc<RefCell<view::MyView>> = view::MyView::new();
-        view.borrow().update();
-        QApplication::exec()
+    // Initialize GTK application
+    gtk::init().expect("Failed to initialize GTK.");
+
+    // Create a new top level window
+    let window = Window::new(WindowType::Toplevel);
+    window.set_title("My GTK App");
+    window.set_default_size(350, 70);
+
+    // Create a new button with label
+    let button = Button::with_label("Click me!");
+
+    // Connect button signal to callback function
+    button.connect_clicked(|_| {
+        println!("Button clicked!");
     });
+
+    // Add the button to the window
+    window.add(&button);
+
+    // Connect the window delete event to the main quit function
+    // window.connect_delete_event(|_, _| {
+    //     gtk::main_quit()
+    // });
+
+    // Show all widgets within the window
+    window.show_all();
+
+    // Start the GTK main loop
+    gtk::main();
 }

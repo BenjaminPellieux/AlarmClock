@@ -4,7 +4,5 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-qt_core = "0.5"
-qt_widgets = "0.5"
-qt_gui = "0.5"
-chrono = "0.4"
+gtk = "0.18.1"
+gio = "0.19.8"
