@@ -1,34 +1,26 @@
 use gtk::prelude::*;
-use gtk::{Button, Window, WindowType};
+use gtk::{Application, ApplicationWindow};
+mod viewmod;
+use viewmod::view::View;
+mod modelmod;
+
 
 fn main() {
-    // Initialize GTK application
-    gtk::init().expect("Failed to initialize GTK.");
+    let application = Application::new(
+        Some("com.example.alarm_clock"),
+        Default::default(),
+    );//.expect("failed to initialize GTK application");
 
-    // Create a new top level window
-    let window = Window::new(WindowType::Toplevel);
-    window.set_title("My GTK App");
-    window.set_default_size(350, 70);
+    application.connect_activate(|app: &Application| {
+        let window: ApplicationWindow = ApplicationWindow::new(app);
+        let mut view: View = View::new();
+        view.build_ui(&window);
+        //view.connect_signals();
+        window.show_all();
 
-    // Create a new button with label
-    let button = Button::with_label("Click me!");
-
-    // Connect button signal to callback function
-    button.connect_clicked(|_| {
-        println!("Button clicked!");
     });
-
-    // Add the button to the window
-    window.add(&button);
-
-    // Connect the window delete event to the main quit function
-    // window.connect_delete_event(|_, _| {
-    //     gtk::main_quit()
-    // });
-
-    // Show all widgets within the window
-    window.show_all();
-
-    // Start the GTK main loop
-    gtk::main();
+    println!("[DEBUG] Application  build  ");
+    
+    application.run();
+    println!("[DEBUG] Application running ");
 }
