@@ -1,10 +1,11 @@
 
 pub mod model {
-    use std::time::{SystemTime, UNIX_EPOCH};
     use chrono::{DateTime, Local, Timelike};
+    use serde::{Serialize, Deserialize};
+    use std::time::{SystemTime, UNIX_EPOCH};
 
 
-    #[derive(Clone,Debug)]
+    #[derive(Clone, Debug, Serialize, Deserialize)]
     pub struct Radio{
         vecURL: Vec<String>,
         status: bool,
@@ -28,8 +29,7 @@ pub mod model {
 
         }
     }
-
-    #[derive(Clone, Debug)]
+    #[derive(Clone, Debug, Serialize, Deserialize)]
     pub struct Horaire {
         pub hour: u8,
         pub minute: u8,
@@ -56,7 +56,7 @@ pub mod model {
         }
     }
 
-    #[derive(Clone, Debug)]
+    #[derive(Clone, Debug, Serialize, Deserialize)]
     pub struct AlarmClock {
         pub horaire: Horaire,
         pub status: bool,

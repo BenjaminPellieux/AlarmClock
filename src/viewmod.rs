@@ -1,17 +1,23 @@
 pub mod view {
     use gtk::prelude::*;
     use gtk::{ApplicationWindow, Box, Button, Entry, Frame, Label, Orientation, RadioButton, SpinButton, glib};
+    use std::borrow::{Borrow, BorrowMut};
     use std::sync::{Arc, Mutex, MutexGuard};
-    use crate::modelmod::model::{AlarmClock, Horaire};
+    use std::rc::Rc;
     use glib::{timeout_add_seconds, Priority, MainContext, Sender, ControlFlow};
+    use std::fs::File;
+    use std::io::{self, Read, Write};
+    use serde_json;
+    use crate::modelmod::model::{AlarmClock, Horaire};
 
     #[derive(Clone)]
     pub struct View {
         widgets: Arc<Widgets>,
-        alarms: Arc<Mutex<Vec<AlarmClock>>>,
+        alarms: Vec<AlarmClock>,
         current_radio: Arc<Mutex<Option<usize>>>,
         horaire: Arc<Mutex<Horaire>>,
         sender: Sender<()>,
+        sele_radio: u8,
     }
 
     #[derive(Clone)]
@@ -42,20 +48,78 @@ pub mod view {
         pub fn new() -> Self {
             let (sender, receiver) = MainContext::channel( Priority::DEFAULT_IDLE);
             let widgets: Widgets = Widgets::new();
-            let alarms: Arc<Mutex<Vec<AlarmClock>>> = Arc::new(Mutex::new(Vec::new()));
+            let mut alarms: Vec<AlarmClock> = Vec::new();
             let current_radio: Arc<Mutex<Option<usize>>> = Arc::new(Mutex::new(None));
             let horaire: Arc<Mutex<Horaire>> = Arc::new(Mutex::new(Horaire::new()));
+            let sele_radio = 1;
 
-            let view = Self {
+            let mut view = Self {
                 widgets: Arc::new(widgets),
                 alarms,
                 current_radio,
                 horaire,
                 sender,
+                sele_radio,
             };
 
+            
             view.connect_receiver(receiver);
+            
+            let _res = match view.load_alarms() {
+                Ok(_res) => println!("[INFO]  File loaded"),
+                Err(error) => println!("[ERROR] Failed to load alarms {error:?}"),
+            };
             view
+        }
+
+        fn add_alarms(&mut self) -> (){
+            let url_song: String  = self.widgets.i_song_link.text().to_string();
+            let tmp_alarm: AlarmClock;
+
+            if url_song.ne(&"") && self.sele_radio<=0{
+                println!("[ERROR] No song URL & No radio selected");
+                return 
+            }
+            else if  url_song.ne(&"") {
+                tmp_alarm = AlarmClock::new(self.widgets.s_heur_box.value() as u8,
+                                            self.widgets.s_min_box.value() as u8,
+                                            self.widgets.s_sec_box.value() as u8,
+                                            url_song, false, 
+                                            self.alarms.len());
+            }else{
+                tmp_alarm = AlarmClock::new(self.widgets.s_heur_box.value() as u8,
+                                            self.widgets.s_min_box.value() as u8,
+                                            self.widgets.s_sec_box.value() as u8,
+                                            url_song, true, 
+                                            self.alarms.len());
+
+            }
+            
+            self.alarms.push(tmp_alarm);
+            
+        }
+
+
+        fn save_alarms(&mut self) -> io::Result<()>{
+            let alarms: &Vec<AlarmClock>  = self.alarms.as_ref();
+            let serialized: String = serde_json::to_string(&*alarms)?;
+            let mut file: File = File::create("ser/alarms.json")?;
+            file.write_all(serialized.as_bytes())?;
+            Ok(())
+        }
+
+
+        fn load_alarms(&mut self) -> io::Result<()> {
+            let mut file: File = File::open("ser/alarms.json").unwrap_or_else(|_| File::create("ser/alarms.json").unwrap());
+            let mut contents: String = String::new();
+            file.read_to_string(&mut contents)?;
+            if !contents.is_empty() {
+                let alarms: Vec<AlarmClock> = serde_json::from_str(&contents)?;
+                self.alarms = alarms.to_vec();
+            }else{
+                println!("[INFO] No alarms finded ");
+            }
+            Ok(())
         }
 
         pub fn build_ui(&self, window: &ApplicationWindow) {
@@ -140,7 +204,7 @@ pub mod view {
             // Save button
             let view_clone = view_rc.clone();
             self.widgets.p_save.connect_clicked(move |_| {
-                let view = view_clone.lock().unwrap();
+                let mut  view = view_clone.lock().unwrap();
                 view.on_save_clicked();
             });
 
@@ -155,7 +219,7 @@ pub mod view {
             let view_clone = view_rc.clone();
             self.widgets.p_rad_b1.connect_toggled(move |radio| {
                 if radio.is_active() {
-                    let view = view_clone.lock().unwrap();
+                    let mut view = view_clone.lock().unwrap();
                     view.on_radio_clicked(1);
                 }
             });
@@ -163,7 +227,7 @@ pub mod view {
             let view_clone = view_rc.clone();
             self.widgets.p_rad_b2.connect_toggled(move |radio| {
                 if radio.is_active() {
-                    let view = view_clone.lock().unwrap();
+                    let mut view = view_clone.lock().unwrap();
                     view.on_radio_clicked(2);
                 }
             });
@@ -171,7 +235,7 @@ pub mod view {
             let view_clone = view_rc.clone();
             self.widgets.p_rad_b3.connect_toggled(move |radio| {
                 if radio.is_active() {
-                    let view = view_clone.lock().unwrap();
+                    let mut view = view_clone.lock().unwrap();
                     view.on_radio_clicked(3);
                 }
             });
@@ -179,7 +243,7 @@ pub mod view {
             let view_clone = view_rc.clone();
             self.widgets.p_rad_b4.connect_toggled(move |radio| {
                 if radio.is_active() {
-                    let view = view_clone.lock().unwrap();
+                    let mut view = view_clone.lock().unwrap();
                     view.on_radio_clicked(4);
                 }
             });
@@ -187,7 +251,7 @@ pub mod view {
             let view_clone = view_rc.clone();
             self.widgets.p_rad_b5.connect_toggled(move |radio| {
                 if radio.is_active() {
-                    let view = view_clone.lock().unwrap();
+                    let mut view = view_clone.lock().unwrap();
                     view.on_radio_clicked(5);
                 }
             });
@@ -209,9 +273,11 @@ pub mod view {
             self.widgets.g_alarm_clock.show_all();
         }
 
-        fn on_save_clicked(&self) {
+        fn on_save_clicked(&mut self) {
             // Logic for saving alarm
             println!("Save button clicked");
+            self.add_alarms();
+            self.save_alarms().expect("Failed to save alarms");
             self.widgets.g_alarm_clock.hide();
         }
 
@@ -221,8 +287,9 @@ pub mod view {
             self.widgets.g_alarm_clock.hide();
         }
 
-        fn on_radio_clicked(&self, id: u8) {
+        fn on_radio_clicked(&mut self, id: u8) {
             // Logic for radio button clicked
+            self.sele_radio = id;
             println!("Radio button {} clicked", id);
         }
 
