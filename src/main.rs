@@ -13,8 +13,13 @@ fn main() {
 
     application.connect_activate(|app: &Application| {
         let window: ApplicationWindow = ApplicationWindow::new(app);
-        let view: View = View::new();
+        let mut view: View = View::new();
+        let _res: () = match view.load_alarms() {
+            Ok(_res) => println!("[INFO]  File loaded"),
+            Err(error) => println!("[ERROR] Failed to load alarms {error:?}"),
+        };
         view.build_ui(&window);
+        view.connect_signals();
         //view.connect_signals();
         window.show_all();
 

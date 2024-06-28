@@ -1,6 +1,7 @@
 pub mod view {
     use gtk::prelude::*;
     use gtk::{ApplicationWindow, Box, Button, Entry, Frame, Label, Orientation, RadioButton, SpinButton, glib, CheckButton};
+    use serde_json::value::Index;
     use std::borrow::{Borrow, BorrowMut};
     use std::sync::{Arc, Mutex, MutexGuard};
     use std::rc::Rc;
@@ -33,7 +34,6 @@ pub mod view {
         p_button_marche: Button,
         p_button_arret: Button,
         p_button_add_alarm_clock: Button,
-        p_button_del_alarm: Option<Button>,
         p_rad_b1: RadioButton,
         p_rad_b2: RadioButton,
         p_rad_b3: RadioButton,
@@ -49,12 +49,12 @@ pub mod view {
         pub fn new() -> Self {
             let (sender, receiver) = MainContext::channel( Priority::DEFAULT_IDLE);
             let widgets: Widgets = Widgets::new();
-            let mut alarms: Vec<AlarmClock> = Vec::new();
+            let alarms: Vec<AlarmClock> = vec![];
             let current_radio: Arc<Mutex<Option<usize>>> = Arc::new(Mutex::new(None));
             let horaire: Arc<Mutex<Horaire>> = Arc::new(Mutex::new(Horaire::new()));
-            let sele_radio = 1;
+            let sele_radio: u8 = 1;
 
-            let mut view = Self {
+            let view: View = Self {
                 widgets: Arc::new(widgets),
                 alarms,
                 current_radio,
@@ -62,47 +62,62 @@ pub mod view {
                 sender,
                 sele_radio,
             };
-
-            
             view.connect_receiver(receiver);
-            
-            let _res = match view.load_alarms() {
-                Ok(_res) => println!("[INFO]  File loaded"),
-                Err(error) => println!("[ERROR] Failed to load alarms {error:?}"),
-            };
             view
         }
 
-        fn add_alarms(&mut self) -> (){
+
+        fn update_alarm_id(&mut self){
+            let mut count:  usize = 0;
+            for alarm in self.alarms.iter_mut(){
+                alarm.id = count;
+                count+=1;
+            }
+        }
+        fn add_alarms(&mut self){
+            
+            println!("[DEBUG] nb alamrs : {}", self.alarms.len());
+            let _res: () = match self.load_alarms() {
+                Ok(_res) => println!("[INFO]  File loaded"),
+                Err(error) => println!("[ERROR] Failed to load alarms {error:?}"),
+            };
             let url_song: String  = self.widgets.i_song_link.text().to_string();
             let tmp_alarm: AlarmClock;
-
+            println!("[DEBUG] nb alamrs : {}", self.alarms.len());
+            println!("[DEBUG] url: {}", url_song);
             if url_song.ne(&"") && self.sele_radio<=0{
                 println!("[ERROR] No song URL & No radio selected");
-                return 
+                 
             }
             else if  url_song.ne(&"") {
+                println!("[DEBUG] is radio FALSE ");
                 tmp_alarm = AlarmClock::new(self.widgets.s_heur_box.value() as u8,
                                             self.widgets.s_min_box.value() as u8,
                                             self.widgets.s_sec_box.value() as u8,
                                             url_song, false, 
                                             self.alarms.len());
+                self.alarms.push(tmp_alarm);
+
             }else{
+                println!("[DEBUG] is radio TRUE ");
                 tmp_alarm = AlarmClock::new(self.widgets.s_heur_box.value() as u8,
                                             self.widgets.s_min_box.value() as u8,
                                             self.widgets.s_sec_box.value() as u8,
                                             url_song, true, 
                                             self.alarms.len());
-
+                self.alarms.push(tmp_alarm);
             }
+            println!("[DEBUG] nb alamrs : {}", self.alarms.len());
             
-            self.alarms.push(tmp_alarm);
+
+            println!("[DEBUG] alarms vec {:#?}",self.alarms);
+
             
         }
 
 
         fn save_alarms(&mut self) -> io::Result<()>{
-            let alarms: &Vec<AlarmClock>  = self.alarms.as_ref();
+            let alarms: &Vec<AlarmClock>  = &self.alarms;
             let serialized: String = serde_json::to_string(&*alarms)?;
             let mut file: File = File::create("ser/alarms.json")?;
             file.write_all(serialized.as_bytes())?;
@@ -110,7 +125,7 @@ pub mod view {
         }
 
 
-        fn load_alarms(&mut self) -> io::Result<()> {
+        pub fn load_alarms(&mut self) -> io::Result<()> {
             let mut file: File = File::open("ser/alarms.json").unwrap_or_else(|_| File::create("ser/alarms.json").unwrap());
             let mut contents: String = String::new();
             file.read_to_string(&mut contents)?;
@@ -118,21 +133,24 @@ pub mod view {
                 let alarms: Vec<AlarmClock> = serde_json::from_str(&contents)?;
                 self.alarms = alarms.to_vec();
             }else{
+                self.alarms = Vec::new();
                 println!("[INFO] No alarms finded ");
             }
+            self.update_alarm_id();
             Ok(())
         }
 
-        fn update_alarms_display(&self) {
+        fn update_alarms_display(&mut self) {
             self.widgets.alarms_container.foreach(|child: &gtk::Widget| self.widgets.alarms_container.remove(child));
             println!("[DEBUG] Update alarms display");
-            for alarm in &self.alarms {
+            println!("[DEBUG] update alamrs display width {}",self.alarms.len());
+            for alarm in self.alarms.iter() {
                 let alarm_box: Box = Box::new(Orientation::Horizontal, 5);
                 
                 let hour_label = Label::new(Some(&format!("{:02}", alarm.horaire.hour)));
                 let min_label = Label::new(Some(&format!("{:02}", alarm.horaire.minute)));
                 let sec_label = Label::new(Some(&format!("{:02}", alarm.horaire.second)));
-                let link_label = Label::new(Some(&alarm.link));
+                let link_label = Label::new(Some(&alarm.song));
                 
                 alarm_box.pack_start(&hour_label, true, true, 0);
                 alarm_box.pack_start(&Label::new(Some("H")), false, false, 0);
@@ -182,12 +200,20 @@ pub mod view {
         }
 
         fn delete_alarm(&mut self, alarm_id: usize) {
-            self.alarms.retain(|alarm: &AlarmClock| alarm.id != alarm_id);
-            self.save_alarms().expect("Failed to save alarms");
-            self.update_alarms_display();
+            println!("[DEBUG] Deleting alarms clock {} ID :{}",self.alarms.len(), alarm_id);
+            //self.alarms.retain(|alarm: &AlarmClock| );
+            if let Some(index) =  self.alarms.iter().position(|alarm: &AlarmClock| alarm.id == alarm_id){
+                self.alarms.remove(index);
+                println!("[DEBUG] Deleting alarms clock {}",self.alarms.len());
+                println!("[DEBUG] alarms vec {:#?}",self.alarms);
+                self.save_alarms().expect("Failed to save alarms");
+                self.update_alarms_display();
+            }
+
+           
         }
 
-        pub fn build_ui(&self, window: &ApplicationWindow) {
+        pub fn build_ui(&mut self, window: &ApplicationWindow) {
             // let window = ApplicationWindow::new(app);
             window.set_title("Alarm Clock");
             window.set_default_size(400, 400);
@@ -237,15 +263,15 @@ pub mod view {
             //window.show_all();
 
             // Connect signals
-            self.connect_signals();
+            
 
             // Update the time every second
             self.update_alarms_display();
             unsafe{self.update_time_labels()};
         }
 
-        fn connect_signals(&self) {
-            let view_rc = Arc::new(Mutex::new(self.clone()));
+        pub fn connect_signals(&mut self) {
+            let view_rc: Arc<Mutex<View>> = Arc::new(Mutex::new(self.clone()));
 
             // Marche button
             let view_clone = view_rc.clone();
@@ -262,7 +288,7 @@ pub mod view {
             });
 
             // Ajouter un réveil button
-            let view_clone = view_rc.clone();
+            let view_clone: Arc<Mutex<View>> = view_rc.clone();
             self.widgets.p_button_add_alarm_clock.connect_clicked(move |_| {
                 let view = view_clone.lock().unwrap();
                 view.on_new_alarm_clicked();
@@ -410,7 +436,6 @@ pub mod view {
                 p_button_marche: Button::with_label("Marche"),
                 p_button_arret: Button::with_label("Arrêt"),
                 p_button_add_alarm_clock: Button::with_label("Ajouter un réveil"),
-                p_button_del_alarm: None,
                 p_rad_b1,
                 p_rad_b2,
                 p_rad_b3,

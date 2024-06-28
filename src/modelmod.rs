@@ -3,7 +3,7 @@ pub mod model {
     use chrono::{DateTime, Local, Timelike};
     use serde::{Serialize, Deserialize};
     use std::time::{SystemTime, UNIX_EPOCH};
-    use std::process::{Command, Output};
+    use std::process::{Command, Child};
 
 
     #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -66,15 +66,22 @@ pub mod model {
         pub link: String,
         pub id: usize,
     }
-
+    // https://www.youtube.com/watch?v=4qR5xmglC9g
     impl AlarmClock {
         pub fn new(hour: u8, minute: u8, second: u8, link: String, is_radio: bool, id: usize) -> Self {
             let song: String = String::new();
             if !is_radio {
                 let song : String  =  format!("song/Alarm_{}.mp3", id);
-                let output: Output = Command::new("yt-dlp")
-                .arg(format!("--format bestaudio --extract-audio --audio-format mp3  --output song/Alarm_{}.mp3 {}", id,link))
-                .output()
+                println!("[DEBUG] Dowloading song {}",song);
+                Command::new("yt-dlp")
+
+                .args(["--format", "bestaudio", 
+                       "--extract-audio",
+                        "--audio-format", "mp3",
+                        "--cookies-from-browser", "firefox",
+                        "--output",format!("song/Alarm_{}.mp3",id).as_str(),
+                        format!("{}",link).as_str()])
+                .spawn()
                 .expect("[ERROR] Failed to download music");
                 
             } 
