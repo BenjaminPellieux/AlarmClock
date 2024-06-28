@@ -1,4 +1,4 @@
 /target
 .vscode/
-.ser/
+alarms.json
 *.mp3
