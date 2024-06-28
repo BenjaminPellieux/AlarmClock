@@ -59,7 +59,7 @@ pub mod model {
     #[derive(Clone, Debug, Serialize, Deserialize)]
     pub struct AlarmClock {
         pub horaire: Horaire,
-        pub status: bool,
+        pub active: bool,
         pub is_radio: bool,
         pub song: String,
         pub link: String,
@@ -79,7 +79,7 @@ pub mod model {
                     minute,
                     second,
                 },
-                status: true,
+                active: true,
                 is_radio,
                 song,
                 link,

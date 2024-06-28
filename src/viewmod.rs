@@ -1,6 +1,6 @@
 pub mod view {
     use gtk::prelude::*;
-    use gtk::{ApplicationWindow, Box, Button, Entry, Frame, Label, Orientation, RadioButton, SpinButton, glib};
+    use gtk::{ApplicationWindow, Box, Button, Entry, Frame, Label, Orientation, RadioButton, SpinButton, glib, CheckButton};
     use std::borrow::{Borrow, BorrowMut};
     use std::sync::{Arc, Mutex, MutexGuard};
     use std::rc::Rc;
@@ -42,6 +42,7 @@ pub mod view {
         p_lcd_heure: Label,
         p_lcd_min: Label,
         p_lcd_sec: Label,
+        alarms_container: Box
     }
 
     impl View {
@@ -122,6 +123,70 @@ pub mod view {
             Ok(())
         }
 
+        fn update_alarms_display(&self) {
+            self.widgets.alarms_container.foreach(|child: &gtk::Widget| self.widgets.alarms_container.remove(child));
+            println!("[DEBUG] Update alarms display");
+            for alarm in &self.alarms {
+                let alarm_box: Box = Box::new(Orientation::Horizontal, 5);
+                
+                let hour_label = Label::new(Some(&format!("{:02}", alarm.horaire.hour)));
+                let min_label = Label::new(Some(&format!("{:02}", alarm.horaire.minute)));
+                let sec_label = Label::new(Some(&format!("{:02}", alarm.horaire.second)));
+                let link_label = Label::new(Some(&alarm.link));
+                
+                alarm_box.pack_start(&hour_label, true, true, 0);
+                alarm_box.pack_start(&Label::new(Some("H")), false, false, 0);
+                alarm_box.pack_start(&min_label, true, true, 0);
+                alarm_box.pack_start(&Label::new(Some("Min")), false, false, 0);
+                alarm_box.pack_start(&sec_label, true, true, 0);
+                alarm_box.pack_start(&Label::new(Some("Sec")), false, false, 0);
+                alarm_box.pack_start(&link_label, true, true, 0);
+    
+                let delete_button: Button = Button::with_label("Supprimer");
+                let active_radio: CheckButton = CheckButton::with_label("Active");
+                active_radio.set_active(alarm.active);
+                let delete_alarm_id: usize = alarm.id;
+                let view_rc: Arc<Mutex<View>> = Arc::new(Mutex::new(self.clone()));
+
+                delete_button.connect_clicked(move |_| {
+                    let mut view: MutexGuard<View> = view_rc.lock().unwrap();
+                    view.delete_alarm(delete_alarm_id);
+                });
+
+                let view_rc: Arc<Mutex<View>> = Arc::new(Mutex::new(self.clone()));
+                active_radio.connect_clicked(move |_| {
+                    let mut view: MutexGuard<View> = view_rc.lock().unwrap();
+                    view.alarm_status(delete_alarm_id);
+                });
+
+                alarm_box.pack_start(&active_radio, false, false, 0);
+                alarm_box.pack_start(&delete_button, false, false, 0);
+    
+                self.widgets.alarms_container.pack_start(&alarm_box, false, false, 5);
+            }
+    
+            self.widgets.alarms_container.show_all();
+        }
+
+
+        fn alarm_status(&mut self, alarm_id: usize) {
+            for alarm in self.alarms.iter_mut(){
+                if alarm.id == alarm_id{
+                    alarm.active = !alarm.active;
+                    println!("[DEBUG] alam {}, active {}", alarm.id, alarm.active);
+                }
+            }
+
+            self.save_alarms().expect("Failed to save alarms");
+            self.update_alarms_display();
+        }
+
+        fn delete_alarm(&mut self, alarm_id: usize) {
+            self.alarms.retain(|alarm: &AlarmClock| alarm.id != alarm_id);
+            self.save_alarms().expect("Failed to save alarms");
+            self.update_alarms_display();
+        }
+
         pub fn build_ui(&self, window: &ApplicationWindow) {
             // let window = ApplicationWindow::new(app);
             window.set_title("Alarm Clock");
@@ -166,6 +231,7 @@ pub mod view {
             vbox.pack_start(&hbox2, false, false, 10);
             vbox.pack_start(&self.widgets.g_alarm_clock, false, false, 10);
             vbox.pack_start(&hbox_rad_b, false, false, 20);
+            vbox.pack_start(&self.widgets.alarms_container, true, true, 10); 
 
             window.add(&vbox);
             //window.show_all();
@@ -174,6 +240,7 @@ pub mod view {
             self.connect_signals();
 
             // Update the time every second
+            self.update_alarms_display();
             unsafe{self.update_time_labels()};
         }
 
@@ -278,6 +345,7 @@ pub mod view {
             println!("Save button clicked");
             self.add_alarms();
             self.save_alarms().expect("Failed to save alarms");
+            self.update_alarms_display();
             self.widgets.g_alarm_clock.hide();
         }
 
@@ -294,11 +362,11 @@ pub mod view {
         }
 
         unsafe fn update_time_labels(&self) {
-            let horaire_rc = self.horaire.clone();
-            let sender = self.sender.clone();
+            let horaire_rc: Arc<Mutex<Horaire>> = self.horaire.clone();
+            let sender: Sender<()> = self.sender.clone();
             
             timeout_add_seconds(1, move || {
-                let mut horaire = horaire_rc.lock().unwrap();
+                let mut horaire: MutexGuard<Horaire> = horaire_rc.lock().unwrap();
                 horaire.update_time();
 
                 // Envoyer un signal pour mettre à jour les widgets
@@ -351,6 +419,7 @@ pub mod view {
                 p_lcd_heure: Label::new(Some("00")),
                 p_lcd_min: Label::new(Some("00")),
                 p_lcd_sec: Label::new(Some("00")),
+                alarms_container: Box::new(Orientation::Vertical, 10),
             }
         }
     }
