@@ -21,19 +21,17 @@ pub mod view {
         music_player: Arc<Mutex<MusicPlayer>>,
     }
 
-
-
     impl View {
         pub fn new() -> Self {
-            let (sender, receiver) = MainContext::channel( Priority::DEFAULT_IDLE);
-            let widgets: Arc<Widgets> = Arc::new(Widgets::new());
+            let (sender, receiver) = MainContext::channel(Priority::DEFAULT_IDLE);
+            let widgets: Widgets = Widgets::new();
             let alarms: Vec<AlarmClock> = vec![];
             let current_radio: Arc<Mutex<Radio>> = Arc::new(Mutex::new(Radio::new()));
             let horaire: Arc<Mutex<Horaire>> = Arc::new(Mutex::new(Horaire::new()));
             let music_player: Arc<Mutex<MusicPlayer>> = Arc::new(Mutex::new(MusicPlayer::new()));
 
             let view: View = Self {
-                widgets,
+                widgets: Arc::new(widgets),
                 alarms,
                 current_radio,
                 horaire,
@@ -255,7 +253,7 @@ pub mod view {
         }
 
         pub fn connect_signals(&mut self) {
-            let view_rc: Arc<Mutex<View>> = Arc::new(Mutex::new(self.clone()));
+            let view_rc = Arc::new(Mutex::new(self.clone()));
 
             // Marche button
             let view_clone = view_rc.clone();
@@ -272,7 +270,7 @@ pub mod view {
             });
 
             // Ajouter un réveil button
-            let view_clone: Arc<Mutex<View>> = view_rc.clone();
+            let view_clone = view_rc.clone();
             self.widgets.p_button_add_alarm_clock.connect_clicked(move |_| {
                 let view = view_clone.lock().unwrap();
                 view.on_new_alarm_clicked();
@@ -281,7 +279,7 @@ pub mod view {
             // Save button
             let view_clone = view_rc.clone();
             self.widgets.p_save.connect_clicked(move |_| {
-                let mut  view = view_clone.lock().unwrap();
+                let mut view = view_clone.lock().unwrap();
                 view.on_save_clicked();
             });
 
@@ -309,7 +307,7 @@ pub mod view {
                 }
             });
 
-            let view_clone = view_rc.clone();
+            let view_clone: Arc<Mutex<View>> = view_rc.clone();
             self.widgets.p_rad_b3.connect_toggled(move |radio| {
                 if radio.is_active() {
                     let mut view = view_clone.lock().unwrap();
@@ -335,8 +333,8 @@ pub mod view {
         }
 
         pub fn on_marche_clicked(&self) {
-            let current_radio: Arc<Mutex<Radio>> = self.current_radio.clone();
-            let music_player: Arc<Mutex<MusicPlayer>> = self.music_player.clone();
+            let current_radio = self.current_radio.clone();
+            let music_player = self.music_player.clone();
             gtk::glib::MainContext::default().spawn_local(async move {
                 if let Some(url) = current_radio.lock().unwrap().get_url() {
                     music_player.lock().unwrap().play_url(url.to_string()).await;
@@ -347,9 +345,9 @@ pub mod view {
         }
 
         pub fn on_arret_clicked(&self) {
-            let music_player: Arc<Mutex<MusicPlayer>> = self.music_player.clone();
+            let music_player = self.music_player.clone();
             gtk::glib::MainContext::default().spawn_local(async move {
-                music_player.lock().unwrap().stop();
+                music_player.lock().unwrap().stop().await;
             });
         }
 
