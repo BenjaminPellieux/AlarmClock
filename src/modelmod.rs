@@ -2,34 +2,46 @@
 pub mod model {
     use chrono::{DateTime, Local, Timelike};
     use serde::{Serialize, Deserialize};
-    use std::time::{SystemTime, UNIX_EPOCH};
-    use std::process::{Command, Child};
+    use std::time::SystemTime;
+    use std::process::Command;
+    // use rodio::{Decoder, OutputStream, OutputStreamHandle, source::Source};
 
 
-    #[derive(Clone, Debug, Serialize, Deserialize)]
-    pub struct Radio{
-        vecURL: Vec<String>,
-        status: bool,
-        selected_radio: i8,
-        }
+    #[derive(Clone, Debug)]
+    pub enum RadioStation {
+        FranceInfo,
+        FranceInter,
+        RTL,
+        RireChanson,
+        Skyrock,
+    }
 
-    impl Radio{
+    #[derive(Clone, Debug)]
+    pub struct Radio {
+        pub status: bool,
+        pub selected_radio: Option<RadioStation>,
+    }
+
+    impl Radio {
         pub fn new() -> Self {
-
-            Radio{
-                vecURL: vec!["http://direct.franceinfo.fr/live/franceinfo-midfi.mp3".to_string(), 
-                                "http://direct.franceinter.fr/live/franceinter-midfi.mp3".to_string(),
-                                "http://streaming.radio.rtl.fr/rtl-1-44-128".to_string(),
-                                "http://cdn.nrjaudio.fm/audio1/fr/30401/mp3_128.mp3".to_string(),
-                                "http://icecast.skyrock.net/s/natio_mp3_128k".to_string()],
+            Radio {
                 status: false,
-                selected_radio: -1,
+                selected_radio: None,
             }
         }
-        pub fn select_radio(&mut self){
 
+        pub fn get_url(&self) -> Option<&'static str> {
+            match self.selected_radio {
+                Some(RadioStation::FranceInfo) => Some("http://direct.franceinfo.fr/live/franceinfo-midfi.mp3"),
+                Some(RadioStation::FranceInter) => Some("http://direct.franceinter.fr/live/franceinter-midfi.mp3"),
+                Some(RadioStation::RTL) => Some("http://streaming.radio.rtl.fr/rtl-1-44-128"),
+                Some(RadioStation::RireChanson) => Some("http://cdn.nrjaudio.fm/audio1/fr/30401/mp3_128.mp3"),
+                Some(RadioStation::Skyrock) => Some("http://icecast.skyrock.net/s/natio_mp3_128k"),
+                None => None,
+            }
         }
     }
+
     #[derive(Clone, Debug, Serialize, Deserialize)]
     pub struct Horaire {
         pub hour: u8,
@@ -55,9 +67,21 @@ pub mod model {
             self.minute = datetime.minute() as u8;
             self.second = datetime.second() as u8;
         }
+
+        pub fn get_hour(&self) -> u8{
+            return self.hour;
+        }
+        pub fn get_min(&self) -> u8{
+            return self.minute;
+        }
+        pub fn get_sec(&self) -> u8{
+            return self.minute;
+        }
+       
     }
 
-    #[derive(Clone, Debug, Serialize, Deserialize)]
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct AlarmClock {
         pub horaire: Horaire,
         pub active: bool,
@@ -65,10 +89,11 @@ pub mod model {
         pub song: String,
         pub link: String,
         pub id: usize,
+        pub name: String
     }
     // https://www.youtube.com/watch?v=4qR5xmglC9g
     impl AlarmClock {
-        pub fn new(hour: u8, minute: u8, second: u8, link: String, is_radio: bool, id: usize) -> Self {
+        pub fn new(name: String, hour: u8, minute: u8, second: u8, link: String, is_radio: bool, id: usize) -> Self {
             let song: String = String::new();
             if !is_radio {
                 let song : String  =  format!("song/Alarm_{}.mp3", id);
@@ -88,6 +113,7 @@ pub mod model {
 
             
             Self {
+                name,
                 horaire: Horaire {
                     hour,
                     minute,

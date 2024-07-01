@@ -3,9 +3,11 @@ use gtk::{Application, ApplicationWindow};
 mod viewmod;
 use viewmod::view::View;
 mod modelmod;
+mod widgetmod;
+mod musicmod;
 
-
-fn main() {
+#[tokio::main]
+async fn main() {
     let application: Application = Application::new(
         Some("com.example.alarm_clock"),
         Default::default(),
@@ -22,6 +24,8 @@ fn main() {
         view.connect_signals();
         //view.connect_signals();
         window.show_all();
+        view.on_cancel_clicked();
+        view.on_radio_clicked(1);
 
     });
     println!("[DEBUG] Application  build  ");
