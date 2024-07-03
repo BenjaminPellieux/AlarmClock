@@ -3,10 +3,11 @@ pub mod view {
     use gtk::{CssProvider, StyleContext, ApplicationWindow, Box, Button, Label, Orientation, glib, CheckButton};
     use std::sync::{Arc, Mutex, MutexGuard};
     use glib::{timeout_add_seconds, Priority, MainContext, Sender, ControlFlow};
-    use std::fs::File;
+    use std::fs::{File, remove_file};
     use std::io::{self, Read, Write};
     use serde_json;
     use std::{thread, time};
+    use chrono::prelude::*;
     use crate::modelmod::model::{AlarmClock, Horaire, Radio, RadioStation};
     use crate::musicmod::music::MusicPlayer;
     use crate::widgetmod::ihm::Widgets;
@@ -36,7 +37,7 @@ pub mod view {
             let music_player: Arc<Mutex<MusicPlayer>> = Arc::new(Mutex::new(MusicPlayer::new()));
             let player_status = false;
 
-            let view: View = Self {
+            let mut view: View = Self {
                 widgets: Arc::new(widgets),
                 alarms,
                 current_radio,
@@ -49,11 +50,12 @@ pub mod view {
             view
         }
 
+    
 
         fn update_alarm_id(&mut self){
             let mut count:  usize = 0;
             for alarm in self.alarms.iter_mut(){
-                alarm.id = count;
+                alarm.a_id = count;
                 count+=1;
             }
         }
@@ -65,7 +67,7 @@ pub mod view {
                 Err(error) => println!("[ERROR] Failed to load alarms {error:?}"),
             };
             let mut days: [bool; 7] = [false; 7];
-            for (i, day_checkbox) in self.widgets.day_checkboxes.iter().enumerate() {
+            for (i, day_checkbox) in self.widgets.days_checkbuttons.iter().enumerate() {
                 days[i] = day_checkbox.is_active();
 
                 println!("[DEBUG]  days {} status {}",i, days[i] );
@@ -73,25 +75,27 @@ pub mod view {
             let name_alarm: String  = self.widgets.i_name_ac.text().to_string();
             let url_song: String  = self.widgets.i_song_link.text().to_string();
             let tmp_alarm: AlarmClock;
-            if url_song.ne(&"") && self.current_radio.lock().unwrap().selected_radio.is_some() {
+            if url_song.eq(&"") && self.current_radio.lock().unwrap().selected_radio.is_some() {
                 println!("[ERROR] No song URL & No radio selected");
                  
             }
             else if  url_song.ne(&"") {
-                tmp_alarm = AlarmClock::new(name_alarm, self.widgets.s_heur_box.value() as u8,
+                print!("[DEBUG] Add alarm width music");
+                tmp_alarm = AlarmClock::new(self.alarms.len(), name_alarm, 
+                                            self.widgets.s_heur_box.value() as u8,
                                             self.widgets.s_min_box.value() as u8,
                                             self.widgets.s_sec_box.value() as u8,
                                             url_song, false, 
-                                            self.alarms.len(),
+                                            None,
                                             days);
                 self.alarms.push(tmp_alarm);
 
             }else{
-                tmp_alarm = AlarmClock::new(name_alarm, self.widgets.s_heur_box.value() as u8,
+                tmp_alarm = AlarmClock::new(self.alarms.len(), name_alarm, self.widgets.s_heur_box.value() as u8,
                                             self.widgets.s_min_box.value() as u8,
                                             self.widgets.s_sec_box.value() as u8,
-                                            url_song, true, 
-                                            self.alarms.len(),
+                                            "".to_string(), true, 
+                                            self.current_radio.lock().unwrap().selected_radio.clone(),
                                             days.clone());
                 self.alarms.push(tmp_alarm);
             }   
@@ -172,7 +176,7 @@ pub mod view {
                 let delete_button: Button = Button::with_label("Supprimer");
                 let active_radio: CheckButton = CheckButton::with_label("Active");
                 active_radio.set_active(alarm.active);
-                let delete_alarm_id: usize = alarm.id;
+                let delete_alarm_id: usize = alarm.a_id;
                 let view_rc: Arc<Mutex<View>> = Arc::new(Mutex::new(self.clone()));
 
                 delete_button.connect_clicked(move |_| {
@@ -202,9 +206,9 @@ pub mod view {
 
         fn alarm_status(&mut self, alarm_id: usize) {
             for alarm in self.alarms.iter_mut(){
-                if alarm.id == alarm_id{
+                if alarm.a_id == alarm_id{
                     alarm.active = !alarm.active;
-                    println!("[DEBUG] alam {}, active {}", alarm.id, alarm.active);
+                    println!("[DEBUG] alam {}, active {}", alarm.a_id, alarm.active);
                 }
             }
 
@@ -212,10 +216,15 @@ pub mod view {
             self.update_alarms_display();
         }
 
+        fn delet_song(&mut self, path: String){
+            let _ = remove_file(path);
+        }
+
         fn delete_alarm(&mut self, alarm_id: usize) {
-            println!("[DEBUG] Deleting alarms clock {} ID :{}",self.alarms.len(), alarm_id);
-            //self.alarms.retain(|alarm: &AlarmClock| );
-            if let Some(index) =  self.alarms.iter().position(|alarm: &AlarmClock| alarm.id == alarm_id){
+            if let Some(index) =  self.alarms.iter().position(|alarm: &AlarmClock| alarm.a_id == alarm_id){
+                if !self.alarms[index].is_radio{
+                    self.delet_song(self.alarms[index].song.clone());
+                }
                 self.alarms.remove(index);
                 println!("[DEBUG] Deleting alarms clock {}",self.alarms.len());
                 println!("[DEBUG] alarms vec {:#?}",self.alarms);
@@ -281,7 +290,7 @@ pub mod view {
             
 
             // Add checkboxes for days
-            for day_checkbox in self.widgets.day_checkboxes.iter() {
+            for day_checkbox in self.widgets.days_checkbuttons.iter() {
                 hbox_days.pack_start(day_checkbox, true, true, 0);
             }
             vbox_reveil.add(&hbox_reveil);
@@ -383,10 +392,33 @@ pub mod view {
             });
         }
 
+        pub fn check_alarms(&mut self) {
+            
+            let _res: () = match self.load_alarms() {
+                Ok(_res) => println!("[INFO]  File loaded"),
+                Err(error) => println!("[ERROR] Failed to load alarms {error:?}"),
+            };
+            println!("[DEBUG] Check alarm {:?} ",self.alarms );
+            let current_time = self.horaire.lock().unwrap().clone();
+            let day_of_week = Local::now().weekday().num_days_from_monday() as usize; // 0 pour Lundi, 6 pour Dimanche
+            for alarm in self.alarms.iter() {
+                if alarm.active && alarm.to_compare(&current_time, day_of_week) {
+                    if alarm.is_radio {
+                        self.current_radio.lock().unwrap().selected_radio = alarm.a_radio.clone();
+                        self.on_marche_clicked();
+                        break;
+                    } else {
+                        self.music_player.lock().unwrap().start(alarm.song.clone());
+                    }
+                }
+            }
+        }
 
         pub fn on_marche_clicked(&mut self) {
             if self.player_status{
                 println!("[INFO] Radio already runnning");
+                self.on_arret_clicked();
+                thread::sleep(time::Duration::from_millis(10));
                 return;
             }
             self.player_status = true;
@@ -415,9 +447,9 @@ pub mod view {
         fn on_new_alarm_clicked(&self) {
             // Logic for adding new alarm
             let horaire: MutexGuard<Horaire> = self.horaire.lock().unwrap();
-            self.widgets.s_heur_box.set_text(&format!("{:02}", horaire.get_hour()));
-            self.widgets.s_min_box.set_text(&format!("{:02}", horaire.get_min()));
-            self.widgets.s_sec_box.set_text(&format!("{:02}", horaire.get_sec()));
+            self.widgets.s_heur_box.set_value(horaire.get_hour() as f64);
+            self.widgets.s_min_box.set_value(horaire.get_min() as f64);
+            self.widgets.s_sec_box.set_value(horaire.get_sec() as f64);
             self.widgets.g_alarm_clock.show_all();
         }
 
@@ -459,19 +491,22 @@ pub mod view {
             timeout_add_seconds(1, move || {
                 let mut horaire: MutexGuard<Horaire> = horaire_rc.lock().unwrap();
                 horaire.update_time();
+
                 // Envoyer un signal pour mettre à jour les widgets
                 sender.send(()).expect("Could not send update signal");
-
+                
                 ControlFlow::Continue
             });
         }
 
+        
 
-        fn connect_receiver(&self, receiver: glib::Receiver<()>) {
+        fn connect_receiver(&mut self, receiver: glib::Receiver<()>) {
             let widgets_rc: Arc<Widgets> = self.widgets.clone();
             let horaire_rc: Arc<Mutex<Horaire>> = self.horaire.clone();
-            
+            let view_rc: Arc<Mutex<View>> = Arc::new(Mutex::new(self.clone()));
             receiver.attach(None, move |_| {
+                view_rc.lock().unwrap().check_alarms();
                 let horaire: MutexGuard<Horaire> = horaire_rc.lock().unwrap();
                 widgets_rc.p_lcd_heure.set_text(&format!("{:02}", horaire.get_hour()));
                 widgets_rc.p_lcd_min.set_text(&format!("{:02}", horaire.get_min()));

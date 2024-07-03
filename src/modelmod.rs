@@ -4,10 +4,8 @@ pub mod model {
     use serde::{Serialize, Deserialize};
     use std::time::SystemTime;
     use std::process::Command;
-    // use rodio::{Decoder, OutputStream, OutputStreamHandle, source::Source};
 
-
-    #[derive(Clone, Debug)]
+    #[derive(Debug, Clone, Serialize, Deserialize)]
     pub enum RadioStation {
         FranceInfo,
         FranceInter,
@@ -86,16 +84,17 @@ pub mod model {
         pub is_radio: bool,
         pub song: String,
         pub link: String,
-        pub id: usize,
+        pub a_radio: Option<RadioStation>,
+        pub a_id: usize,
         pub name: String,
         pub days: [bool; 7],
     }
     // https://www.youtube.com/watch?v=4qR5xmglC9g
     impl AlarmClock {
-        pub fn new(name: String, hour: u8, minute: u8, second: u8, link: String, is_radio: bool, id: usize, days: [bool; 7]) -> Self {
+        pub fn new(a_id: usize, name: String, hour: u8, minute: u8, second: u8, link: String, is_radio: bool, a_radio: Option<RadioStation>, days: [bool; 7]) -> Self {
             let song: String = String::new();
-            if !is_radio {
-                let song : String  =  format!("song/Alarm_{}.mp3", id);
+            if !is_radio{
+                let song : String  =  format!("song/Alarm_{}.mp3", a_id);
                 println!("[DEBUG] Dowloading song {}",song);
                 Command::new("yt-dlp")
 
@@ -103,15 +102,16 @@ pub mod model {
                        "--extract-audio",
                         "--audio-format", "mp3",
                         "--cookies-from-browser", "firefox",
-                        "--output",format!("song/Alarm_{}.mp3",id).as_str(),
+                        "--output",format!("song/Alarm_{}.mp3",a_id).as_str(),
                         format!("{}",link).as_str()])
                 .spawn()
                 .expect("[ERROR] Failed to download music");
                 
-            } 
+            }
 
             
             Self {
+                a_id,
                 name,
                 horaire: Horaire {
                     hour,
@@ -122,15 +122,16 @@ pub mod model {
                 is_radio,
                 song,
                 link,
-                id,
+                a_radio,
                 days,
             }
         }
 
-        pub fn to_compare(&self, other: &Horaire) -> bool {
+        pub fn to_compare(&self, other: &Horaire, day_of_week: usize) -> bool {
             self.horaire.hour == other.hour &&
             self.horaire.minute == other.minute &&
-            self.horaire.second == other.second
+            self.horaire.second == other.second &&
+            self.days[day_of_week]
         }
     }
 }

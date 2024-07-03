@@ -24,7 +24,7 @@ pub mod ihm{
         pub p_lcd_min: Label,
         pub p_lcd_sec: Label,
         pub alarms_container: Box,
-        pub day_checkboxes: [CheckButton; 7], // Checkboxes for each day of the week
+        pub days_checkbuttons: Vec<CheckButton>, // Checkboxes for each day of the week
     }
 
 
@@ -36,6 +36,15 @@ pub mod ihm{
             let p_rad_b4 = RadioButton::with_label_from_widget(&p_rad_b1, "Rire & Chanson");
             let p_rad_b5 = RadioButton::with_label_from_widget(&p_rad_b1, "Skyrock");
 
+            let days_checkbuttons = vec![
+                CheckButton::with_label("Lun"),
+                CheckButton::with_label("Mar"),
+                CheckButton::with_label("Mer"),
+                CheckButton::with_label("Jeu"),
+                CheckButton::with_label("Ven"),
+                CheckButton::with_label("Sam"),
+                CheckButton::with_label("Dim"),
+            ];
             Widgets {
                 g_alarm_clock: Frame::new(Some("Nouveau réveil")),
                 g_alarm_clock_tab: Frame::new(Some("Réveil")),
@@ -58,15 +67,7 @@ pub mod ihm{
                 p_lcd_min: Label::new(Some("00")),
                 p_lcd_sec: Label::new(Some("00")),
                 alarms_container: Box::new(Orientation::Vertical, 10),
-                day_checkboxes: [
-                                CheckButton::with_label("Lundi"),
-                                CheckButton::with_label("Mardi"),
-                                CheckButton::with_label("Mercredi"),
-                                CheckButton::with_label("Jeudi"),
-                                CheckButton::with_label("Vendredi"),
-                                CheckButton::with_label("Samedi"),
-                                CheckButton::with_label("Dimanche"),
-                                ],
+                days_checkbuttons,
             }
         }
     }
