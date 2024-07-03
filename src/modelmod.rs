@@ -18,14 +18,12 @@ pub mod model {
 
     #[derive(Clone, Debug)]
     pub struct Radio {
-        pub status: bool,
         pub selected_radio: Option<RadioStation>,
     }
 
     impl Radio {
         pub fn new() -> Self {
             Radio {
-                status: false,
                 selected_radio: None,
             }
         }

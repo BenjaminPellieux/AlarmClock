@@ -5,7 +5,6 @@ pub mod music {
     use std::thread;
 
     pub enum MusicCommand {
-        PlayUrl(String),
         Stop,
     }
 
@@ -49,7 +48,6 @@ pub mod music {
 
                 loop {
                     match receiver.try_recv() {
-                        Ok(MusicCommand::PlayUrl(_)) => todo!(),
                         Ok(MusicCommand::Stop) | Err(mpsc::TryRecvError::Disconnected) => {
                             pipeline.set_state(gstreamer::State::Null).unwrap();
                             break;

@@ -193,8 +193,10 @@ pub mod view {
                 vbox_alarm.add(&hbox_days);
                 self.widgets.alarms_container.add(&vbox_alarm,);
             }
-    
+
             self.widgets.alarms_container.show_all();
+
+
         }
 
 
@@ -287,11 +289,12 @@ pub mod view {
             vbox_reveil.add(&hbox_days);
             self.widgets.g_alarm_clock.add(&vbox_reveil);
 
+            self.widgets.g_alarm_clock_tab.add(&self.widgets.alarms_container);
             vbox.pack_start(&hbox1, false, false, 10);
             vbox.pack_start(&hbox2, false, false, 10);
             vbox.pack_start(&self.widgets.g_alarm_clock, false, false, 10);
             vbox.pack_start(&hbox_rad_b, false, false, 20);
-            vbox.pack_start(&self.widgets.alarms_container, false, true, 10); 
+            vbox.pack_start(&self.widgets.g_alarm_clock_tab, false, true, 10); 
 
             window.add(&vbox);
             
@@ -478,5 +481,4 @@ pub mod view {
         }
     }
 
-    
 }

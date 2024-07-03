@@ -4,7 +4,7 @@ pub mod ihm{
    #[derive(Clone)]
     pub struct Widgets {
         pub g_alarm_clock: Frame,
-        pub g_alarm_clock_tab: Option<Frame>,
+        pub g_alarm_clock_tab: Frame,
         pub s_heur_box: SpinButton,
         pub s_min_box: SpinButton,
         pub s_sec_box: SpinButton,
@@ -38,7 +38,7 @@ pub mod ihm{
 
             Widgets {
                 g_alarm_clock: Frame::new(Some("Nouveau réveil")),
-                g_alarm_clock_tab: None,
+                g_alarm_clock_tab: Frame::new(Some("Réveil")),
                 s_heur_box: SpinButton::with_range(0.0, 23.0, 1.0),
                 s_min_box: SpinButton::with_range(0.0, 59.0, 1.0),
                 s_sec_box: SpinButton::with_range(0.0, 59.0, 1.0),
