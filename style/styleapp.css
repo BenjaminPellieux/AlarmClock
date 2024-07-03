@@ -1,0 +1,32 @@
+#label-large {
+    font-size: 25px;
+}
+
+label {
+    font-size: 15px;
+}
+
+frame {
+    border-width: 2px;
+    border-style: solid;
+    border-color: #000;
+    padding: 10px;
+}
+
+.button {
+    margin: 5px;
+    padding: 10px;
+    border-radius: 5px;
+    background: #007BFF;
+    color: white;
+}
+
+.button:hover {
+    background: #0056b3;
+}
+
+#box-alarm {
+    border: 2px solid #000;
+    padding: 10px;
+    margin: 5px;
+}

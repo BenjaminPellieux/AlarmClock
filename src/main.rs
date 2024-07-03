@@ -26,6 +26,7 @@ async fn main() {
         window.show_all();
         view.on_cancel_clicked();
         view.on_radio_clicked(1);
+        view.on_arret_clicked();
 
     });
     println!("[DEBUG] Application  build  ");

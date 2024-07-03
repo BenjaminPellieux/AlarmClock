@@ -1,5 +1,5 @@
 pub mod ihm{
-    use gtk::{Box, Button, Entry, Frame, Label, Orientation, RadioButton, SpinButton};
+    use gtk::{Box, Button, Entry, Frame, Label, Orientation, RadioButton, SpinButton, CheckButton};
     
    #[derive(Clone)]
     pub struct Widgets {
@@ -23,7 +23,8 @@ pub mod ihm{
         pub p_lcd_heure: Label,
         pub p_lcd_min: Label,
         pub p_lcd_sec: Label,
-        pub alarms_container: Box
+        pub alarms_container: Box,
+        pub day_checkboxes: [CheckButton; 7], // Checkboxes for each day of the week
     }
 
 
@@ -57,6 +58,15 @@ pub mod ihm{
                 p_lcd_min: Label::new(Some("00")),
                 p_lcd_sec: Label::new(Some("00")),
                 alarms_container: Box::new(Orientation::Vertical, 10),
+                day_checkboxes: [
+                                CheckButton::with_label("Lundi"),
+                                CheckButton::with_label("Mardi"),
+                                CheckButton::with_label("Mercredi"),
+                                CheckButton::with_label("Jeudi"),
+                                CheckButton::with_label("Vendredi"),
+                                CheckButton::with_label("Samedi"),
+                                CheckButton::with_label("Dimanche"),
+                                ],
             }
         }
     }

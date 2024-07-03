@@ -75,7 +75,7 @@ pub mod model {
             return self.minute;
         }
         pub fn get_sec(&self) -> u8{
-            return self.minute;
+            return self.second;
         }
        
     }
@@ -89,11 +89,12 @@ pub mod model {
         pub song: String,
         pub link: String,
         pub id: usize,
-        pub name: String
+        pub name: String,
+        pub days: [bool; 7],
     }
     // https://www.youtube.com/watch?v=4qR5xmglC9g
     impl AlarmClock {
-        pub fn new(name: String, hour: u8, minute: u8, second: u8, link: String, is_radio: bool, id: usize) -> Self {
+        pub fn new(name: String, hour: u8, minute: u8, second: u8, link: String, is_radio: bool, id: usize, days: [bool; 7]) -> Self {
             let song: String = String::new();
             if !is_radio {
                 let song : String  =  format!("song/Alarm_{}.mp3", id);
@@ -124,6 +125,7 @@ pub mod model {
                 song,
                 link,
                 id,
+                days,
             }
         }
 
