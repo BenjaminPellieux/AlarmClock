@@ -6,9 +6,13 @@ pub mod view {
     use std::fs::File;
     use std::io::{self, Read, Write};
     use serde_json;
+    use std::{thread, time};
     use crate::modelmod::model::{AlarmClock, Horaire, Radio, RadioStation};
     use crate::musicmod::music::MusicPlayer;
     use crate::widgetmod::ihm::Widgets;
+
+    
+
 
 
     #[derive(Clone)]
@@ -19,6 +23,7 @@ pub mod view {
         horaire: Arc<Mutex<Horaire>>,
         sender: Sender<()>,
         music_player: Arc<Mutex<MusicPlayer>>,
+        player_status: bool 
     }
 
     impl View {
@@ -29,6 +34,7 @@ pub mod view {
             let current_radio: Arc<Mutex<Radio>> = Arc::new(Mutex::new(Radio::new()));
             let horaire: Arc<Mutex<Horaire>> = Arc::new(Mutex::new(Horaire::new()));
             let music_player: Arc<Mutex<MusicPlayer>> = Arc::new(Mutex::new(MusicPlayer::new()));
+            let player_status = false;
 
             let view: View = Self {
                 widgets: Arc::new(widgets),
@@ -37,6 +43,7 @@ pub mod view {
                 horaire,
                 sender,
                 music_player,
+                player_status,
             };
             view.connect_receiver(receiver);
             view
@@ -299,14 +306,14 @@ pub mod view {
             // Marche button
             let view_clone = view_rc.clone();
             self.widgets.p_button_marche.connect_clicked(move |_| {
-                let view = view_clone.lock().unwrap();
+                let mut view = view_clone.lock().unwrap();
                 view.on_marche_clicked();
             });
 
             // Arrêt button
             let view_clone = view_rc.clone();
             self.widgets.p_button_arret.connect_clicked(move |_| {
-                let view = view_clone.lock().unwrap();
+                let mut view = view_clone.lock().unwrap();
                 view.on_arret_clicked();
             });
 
@@ -374,11 +381,12 @@ pub mod view {
         }
 
 
-        pub fn on_marche_clicked(&self) {
-            if self.current_radio.lock().unwrap().status{
-                println!("[INFO] Radio alredy runnning");
+        pub fn on_marche_clicked(&mut self) {
+            if self.player_status{
+                println!("[INFO] Radio already runnning");
                 return;
             }
+            self.player_status = true;
             let current_radio: Arc<Mutex<Radio>> = self.current_radio.clone();
             let music_player: Arc<Mutex<MusicPlayer>> = self.music_player.clone();
             gtk::glib::MainContext::default().spawn_local(async move {
@@ -391,10 +399,10 @@ pub mod view {
             });
         }
 
-        pub fn on_arret_clicked(&self) {
-            let music_player = self.music_player.clone();
+        pub fn on_arret_clicked(&mut self) {
+            self.player_status = false;
+            let music_player: Arc<Mutex<MusicPlayer>> = self.music_player.clone();
             gtk::glib::MainContext::default().spawn_local(async move {
-                println!("[DEBUG] Calling stop");
                 music_player.lock().unwrap().stop();
             });
         }
@@ -403,7 +411,6 @@ pub mod view {
 
         fn on_new_alarm_clicked(&self) {
             // Logic for adding new alarm
-            println!("Ajouter un réveil button clicked");
             let horaire: MutexGuard<Horaire> = self.horaire.lock().unwrap();
             self.widgets.s_heur_box.set_text(&format!("{:02}", horaire.get_hour()));
             self.widgets.s_min_box.set_text(&format!("{:02}", horaire.get_min()));
@@ -413,7 +420,6 @@ pub mod view {
 
         fn on_save_clicked(&mut self) {
             // Logic for saving alarm
-            println!("Save button clicked");
             self.add_alarms();
             self.save_alarms().expect("Failed to save alarms");
             self.update_alarms_display();
@@ -422,7 +428,6 @@ pub mod view {
 
         pub fn on_cancel_clicked(&self) {
             // Logic for canceling alarm
-            println!("Cancel button clicked");
             self.widgets.g_alarm_clock.hide();
         }
 
@@ -436,9 +441,10 @@ pub mod view {
                 5 => self.current_radio.lock().unwrap().selected_radio = Some(RadioStation::Skyrock),
                 _ => println!("Radio button {} clicked", id_radio),
             };
-            println!("Radio button {} clicked", id_radio);
-            if self.current_radio.lock().unwrap().status{
+            println!("Radio button {} clicked \n radio status {}", id_radio, self.player_status);
+            if self.player_status{
                 self.on_arret_clicked();
+                thread::sleep(time::Duration::from_millis(10));
                 self.on_marche_clicked();
             }
         }
@@ -450,7 +456,6 @@ pub mod view {
             timeout_add_seconds(1, move || {
                 let mut horaire: MutexGuard<Horaire> = horaire_rc.lock().unwrap();
                 horaire.update_time();
-                println!("[INFO] Update TIME");
                 // Envoyer un signal pour mettre à jour les widgets
                 sender.send(()).expect("Could not send update signal");
 
@@ -462,7 +467,6 @@ pub mod view {
         fn connect_receiver(&self, receiver: glib::Receiver<()>) {
             let widgets_rc: Arc<Widgets> = self.widgets.clone();
             let horaire_rc: Arc<Mutex<Horaire>> = self.horaire.clone();
-            println!("[INFO] Update TIME");
             
             receiver.attach(None, move |_| {
                 let horaire: MutexGuard<Horaire> = horaire_rc.lock().unwrap();

@@ -11,20 +11,18 @@ pub mod music {
 
     pub struct MusicPlayer {
         sender: Option<mpsc::Sender<MusicCommand>>,
-        status: bool,
     }
 
     impl MusicPlayer {
         pub fn new() -> Self {
             gstreamer::init().unwrap();
-            MusicPlayer { sender: None, status : false }
+            MusicPlayer { sender: None}
         }
 
         pub fn start(&mut self, url: String) {
             if let Some(sender) = &self.sender {
                 let _ = sender.send(MusicCommand::Stop);
             }
-            self.status = true;
             let (sender, receiver) = mpsc::channel();
             self.sender = Some(sender);
 
@@ -79,10 +77,10 @@ pub mod music {
         }
 
         pub fn stop(&mut self) {
-            self.status = false;
             if let Some(sender) = &self.sender {
                 let _ = sender.send(MusicCommand::Stop);
             }
         }
+
     }
 }

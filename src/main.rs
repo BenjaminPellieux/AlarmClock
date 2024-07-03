@@ -9,7 +9,7 @@ mod musicmod;
 #[tokio::main]
 async fn main() {
     let application: Application = Application::new(
-        Some("com.example.alarm_clock"),
+        Some("com.my.alarm_clock"),
         Default::default(),
     );//.expect("failed to initialize GTK application");
 
@@ -29,8 +29,5 @@ async fn main() {
         view.on_arret_clicked();
 
     });
-    println!("[DEBUG] Application  build  ");
-    
     application.run();
-    println!("[DEBUG] Application running ");
 }
