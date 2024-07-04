@@ -65,7 +65,6 @@ pub mod view {
         }
         fn add_alarms(&mut self){
             
-            println!("[DEBUG] nb alamrs : {}", self.alarms.len());
             let _res: () = match self.load_alarms() {
                 Ok(_res) => println!("[INFO]  File loaded"),
                 Err(error) => println!("[ERROR] Failed to load alarms {error:?}"),
@@ -74,7 +73,6 @@ pub mod view {
             for (i, day_checkbox) in self.widgets.days_checkbuttons.iter().enumerate() {
                 days[i] = day_checkbox.is_active();
 
-                println!("[DEBUG]  days {} status {}",i, days[i] );
             }
             let name_alarm: String  = self.widgets.i_name_ac.text().to_string();
             let url_song: String  = self.widgets.i_song_link.text().to_string();
@@ -84,7 +82,6 @@ pub mod view {
                  
             }
             else if  url_song.ne(&"") {
-                print!("[DEBUG] Add alarm width music");
                 tmp_alarm = AlarmClock::new(self.alarms.len(), name_alarm, 
                                             self.widgets.s_heur_box.value() as u8,
                                             self.widgets.s_min_box.value() as u8,
@@ -103,9 +100,6 @@ pub mod view {
                                             days.clone());
                 self.alarms.push(tmp_alarm);
             }   
-
-            println!("[DEBUG] alarms vec {:#?}",self.alarms);
-
             
         }
 
@@ -136,8 +130,6 @@ pub mod view {
 
         fn update_alarms_display(&mut self) {
             self.widgets.alarms_container.foreach(|child: &gtk::Widget| self.widgets.alarms_container.remove(child));
-            println!("[DEBUG] Update alarms display");
-            println!("[DEBUG] update alamrs display width {}",self.alarms.len());
             for alarm in self.alarms.iter() {
                 
                 let vbox_alarm: Box = Box::new(Orientation::Vertical, 5);
@@ -212,7 +204,6 @@ pub mod view {
             for alarm in self.alarms.iter_mut(){
                 if alarm.a_id == alarm_id{
                     alarm.active = !alarm.active;
-                    println!("[DEBUG] alam {}, active {}", alarm.a_id, alarm.active);
                 }
             }
 
@@ -230,8 +221,6 @@ pub mod view {
                     self.delet_song(self.alarms[index].song.clone());
                 }
                 self.alarms.remove(index);
-                println!("[DEBUG] Deleting alarms clock {}",self.alarms.len());
-                println!("[DEBUG] alarms vec {:#?}",self.alarms);
                 self.save_alarms().expect("Failed to save alarms");
                 self.update_alarms_display();
             }
@@ -407,7 +396,6 @@ pub mod view {
             let day_of_week = Local::now().weekday().num_days_from_monday() as usize; // 0 pour Lundi, 6 pour Dimanche
             for alarm in self.alarms.iter() {
                 if alarm.active && alarm.to_compare(&current_time, day_of_week) {
-                    println!("[DEBUG] Check alarm {:?} ",alarm);
                     if alarm.is_radio {
                         self.current_radio.lock().unwrap().selected_radio = alarm.a_radio.clone();
                         self.start_player(true, "".to_string());
@@ -429,7 +417,6 @@ pub mod view {
             gtk::glib::MainContext::default().spawn_local(async move {
                 if radio {
                     if let Some(url) = current_radio.lock().unwrap().get_url() {
-                            println!("[DEBUG] Calling play_url with URL: {}", url);
                             radio_player.lock().unwrap().play(url.to_string());
                         } else {
                             println!("No radio selected");
