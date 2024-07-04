@@ -83,26 +83,26 @@ pub mod model {
         pub active: bool,
         pub is_radio: bool,
         pub song: String,
-        pub link: String,
         pub a_radio: Option<RadioStation>,
         pub a_id: usize,
         pub name: String,
         pub days: [bool; 7],
     }
     // https://www.youtube.com/watch?v=4qR5xmglC9g
+    // https://www.youtube.com/watch?v=GFUN4pqAhLg
     impl AlarmClock {
         pub fn new(a_id: usize, name: String, hour: u8, minute: u8, second: u8, link: String, is_radio: bool, a_radio: Option<RadioStation>, days: [bool; 7]) -> Self {
-            let song: String = String::new();
+            let mut song: String = String::new();
             if !is_radio{
-                let song : String  =  format!("song/Alarm_{}.mp3", a_id);
+                song =  format!("song/Alarm_{}.wav", a_id);
                 println!("[DEBUG] Dowloading song {}",song);
                 Command::new("yt-dlp")
 
                 .args(["--format", "bestaudio", 
                        "--extract-audio",
-                        "--audio-format", "mp3",
+                        "--audio-format", "wav",
                         "--cookies-from-browser", "firefox",
-                        "--output",format!("song/Alarm_{}.mp3",a_id).as_str(),
+                        "--output",format!("song/Alarm_{}.wav",a_id).as_str(),
                         format!("{}",link).as_str()])
                 .spawn()
                 .expect("[ERROR] Failed to download music");
@@ -121,7 +121,6 @@ pub mod model {
                 active: true,
                 is_radio,
                 song,
-                link,
                 a_radio,
                 days,
             }

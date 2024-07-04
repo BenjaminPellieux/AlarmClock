@@ -1,4 +1,4 @@
 /target
 .vscode/
-alarms.json
-*.mp3
+*.json
+*.wav

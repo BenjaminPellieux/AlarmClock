@@ -398,20 +398,42 @@ pub mod view {
                 Ok(_res) => println!("[INFO]  File loaded"),
                 Err(error) => println!("[ERROR] Failed to load alarms {error:?}"),
             };
-            println!("[DEBUG] Check alarm {:?} ",self.alarms );
+
             let current_time = self.horaire.lock().unwrap().clone();
             let day_of_week = Local::now().weekday().num_days_from_monday() as usize; // 0 pour Lundi, 6 pour Dimanche
             for alarm in self.alarms.iter() {
                 if alarm.active && alarm.to_compare(&current_time, day_of_week) {
+                    println!("[DEBUG] Check alarm {:?} ",alarm);
                     if alarm.is_radio {
                         self.current_radio.lock().unwrap().selected_radio = alarm.a_radio.clone();
                         self.on_marche_clicked();
                         break;
                     } else {
-                        self.music_player.lock().unwrap().start(alarm.song.clone());
+                        self.start_player(false, alarm.song.clone());
+                        break;
                     }
                 }
             }
+        }
+
+
+        fn start_player(&mut self, radio : bool, file_path: String){
+            self.player_status = true;
+            let current_radio: Arc<Mutex<Radio>> = self.current_radio.clone();
+            let music_player: Arc<Mutex<MusicPlayer>> = self.music_player.clone();
+            gtk::glib::MainContext::default().spawn_local(async move {
+                if radio {
+                    if let Some(url) = current_radio.lock().unwrap().get_url() {
+                            println!("[DEBUG] Calling play_url with URL: {}", url);
+                            music_player.lock().unwrap().play_url(url.to_string());
+                        } else {
+                            println!("No radio selected");
+                        }
+                }else{
+                    music_player.lock().unwrap().play_file(file_path);
+
+                }
+            });     
         }
 
         pub fn on_marche_clicked(&mut self) {
@@ -421,17 +443,8 @@ pub mod view {
                 thread::sleep(time::Duration::from_millis(10));
                 return;
             }
-            self.player_status = true;
-            let current_radio: Arc<Mutex<Radio>> = self.current_radio.clone();
-            let music_player: Arc<Mutex<MusicPlayer>> = self.music_player.clone();
-            gtk::glib::MainContext::default().spawn_local(async move {
-                if let Some(url) = current_radio.lock().unwrap().get_url() {
-                    println!("[DEBUG] Calling play_url with URL: {}", url);
-                    music_player.lock().unwrap().start(url.to_string());
-                } else {
-                    println!("No radio selected");
-                }
-            });
+            self.start_player(true, "".to_string());
+            
         }
 
         pub fn on_arret_clicked(&mut self) {
