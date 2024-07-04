@@ -95,7 +95,6 @@ pub mod model {
             let mut song: String = String::new();
             if !is_radio{
                 song =  format!("song/Alarm_{}.wav", a_id);
-                println!("[DEBUG] Dowloading song {}",song);
                 Command::new("yt-dlp")
 
                 .args(["--format", "bestaudio", 

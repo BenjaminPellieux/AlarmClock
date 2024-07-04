@@ -2,7 +2,8 @@ pub mod view {
     use gtk::prelude::*;
     use gtk::{CssProvider, StyleContext, ApplicationWindow, Box, Button, Label, Orientation, glib, CheckButton};
     use std::sync::{Arc, Mutex, MutexGuard};
-    use glib::{timeout_add_seconds, Priority, MainContext, Sender, ControlFlow};
+    use async_channel::{unbounded, Receiver, Sender};
+    use glib::{timeout_add_seconds, MainContext, ControlFlow};
     use std::fs::{File, remove_file};
     use std::io::{self, Read, Write};
     use serde_json;
@@ -30,7 +31,7 @@ pub mod view {
 
     impl View {
         pub fn new() -> Self {
-            let (sender, receiver) = MainContext::channel(Priority::DEFAULT_IDLE);
+            let (sender, receiver) = unbounded();
             let widgets: Widgets = Widgets::new();
             let alarms: Vec<AlarmClock> = vec![];
             let current_radio: Arc<Mutex<Radio>> = Arc::new(Mutex::new(Radio::new()));
@@ -519,27 +520,27 @@ pub mod view {
                 horaire.update_time();
 
                 // Envoyer un signal pour mettre à jour les widgets
-                sender.send(()).expect("Could not send update signal");
+                let _ = sender.send(());
                 
                 ControlFlow::Continue
             });
         }
 
-        
-
-        fn connect_receiver(&mut self, receiver: glib::Receiver<()>) {
+        fn connect_receiver(&mut self, receiver: Receiver<()>) {
             let widgets_rc: Arc<Widgets> = self.widgets.clone();
             let horaire_rc: Arc<Mutex<Horaire>> = self.horaire.clone();
             let view_rc: Arc<Mutex<View>> = Arc::new(Mutex::new(self.clone()));
-            receiver.attach(None, move |_| {
-                view_rc.lock().unwrap().check_alarms();
-                let horaire: MutexGuard<Horaire> = horaire_rc.lock().unwrap();
-                widgets_rc.p_lcd_heure.set_text(&format!("{:02}", horaire.get_hour()));
-                widgets_rc.p_lcd_min.set_text(&format!("{:02}", horaire.get_min()));
-                widgets_rc.p_lcd_sec.set_text(&format!("{:02}", horaire.get_sec()));
-                ControlFlow::Continue
+            
+            MainContext::default().spawn_local(async move {
+                
+                while let Ok(_) = receiver.recv().await {
+                    view_rc.lock().unwrap().check_alarms();
+                    let horaire: MutexGuard<Horaire> = horaire_rc.lock().unwrap();
+                    widgets_rc.p_lcd_heure.set_text(&format!("{:02}", horaire.get_hour()));
+                    widgets_rc.p_lcd_min.set_text(&format!("{:02}", horaire.get_min()));
+                    widgets_rc.p_lcd_sec.set_text(&format!("{:02}", horaire.get_sec()));
+                }
             });
         }
     }
-
 }

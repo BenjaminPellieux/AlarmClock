@@ -5,7 +5,6 @@ pub mod music {
     use std::fs::File;
     use std::io::BufReader;
     use std::sync::mpsc::{channel, Sender, TryRecvError};
-    use std::sync::{Arc, Mutex};
     use std::thread;
 
     pub enum MusicCommand {
@@ -19,19 +18,13 @@ pub mod music {
         fn stop(&mut self);
     }
 
-    struct PlayerState {
-        pipeline: Option<Pipeline>,
-        sink: Option<Sink>,
-    }
 
     pub struct RadioPlayer {
         sender: Option<Sender<MusicCommand>>,
-        state: Arc<Mutex<PlayerState>>,
     }
 
     pub struct WavPlayer {
         sender: Option<Sender<MusicCommand>>,
-        state: Arc<Mutex<PlayerState>>,
     }
 
     impl RadioPlayer {
@@ -39,10 +32,7 @@ pub mod music {
             gstreamer::init().unwrap();
             RadioPlayer {
                 sender: None,
-                state: Arc::new(Mutex::new(PlayerState {
-                    pipeline: None,
-                    sink: None,
-                })),
+
             }
         }
 
@@ -129,10 +119,7 @@ pub mod music {
         pub fn new() -> Self {
             WavPlayer {
                 sender: None,
-                state: Arc::new(Mutex::new(PlayerState {
-                    pipeline: None,
-                    sink: None,
-                })),
+
             }
         }
 
