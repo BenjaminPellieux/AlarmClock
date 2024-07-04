@@ -9,7 +9,7 @@ pub mod view {
     use std::{thread, time};
     use chrono::prelude::*;
     use crate::modelmod::model::{AlarmClock, Horaire, Radio, RadioStation};
-    use crate::musicmod::music::{WavPlayer, RadioPlayer};
+    use crate::musicmod::music::{WavPlayer, RadioPlayer, Music};
     use crate::widgetmod::ihm::Widgets;
 
     
@@ -78,7 +78,7 @@ pub mod view {
             let name_alarm: String  = self.widgets.i_name_ac.text().to_string();
             let url_song: String  = self.widgets.i_song_link.text().to_string();
             let tmp_alarm: AlarmClock;
-            if url_song.eq(&"") && self.current_radio.lock().unwrap().selected_radio.is_some() {
+            if url_song.eq(&"") && !self.current_radio.lock().unwrap().selected_radio.is_some() {
                 println!("[ERROR] No song URL & No radio selected");
                  
             }
@@ -409,7 +409,7 @@ pub mod view {
                     println!("[DEBUG] Check alarm {:?} ",alarm);
                     if alarm.is_radio {
                         self.current_radio.lock().unwrap().selected_radio = alarm.a_radio.clone();
-                        self.on_marche_clicked();
+                        self.start_player(true, "".to_string());
                         break;
                     } else {
                         self.start_player(false, alarm.song.clone());
@@ -429,12 +429,12 @@ pub mod view {
                 if radio {
                     if let Some(url) = current_radio.lock().unwrap().get_url() {
                             println!("[DEBUG] Calling play_url with URL: {}", url);
-                            radio_player.lock().unwrap().play_url(url.to_string());
+                            radio_player.lock().unwrap().play(url.to_string());
                         } else {
                             println!("No radio selected");
                         }
                 }else{
-                    wav_player.lock().unwrap().play_file(file_path);
+                    wav_player.lock().unwrap().play(file_path);
 
                 }
             });     

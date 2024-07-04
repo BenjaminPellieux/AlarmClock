@@ -1,90 +1,109 @@
 pub mod music {
     use gstreamer::prelude::*;
     use gstreamer::{ElementFactory, Pipeline, MessageView, State};
-    use std::thread;
     use rodio::{Decoder, OutputStream, Sink};
     use std::fs::File;
     use std::io::BufReader;
     use std::sync::mpsc::{channel, Sender, TryRecvError};
+    use std::sync::{Arc, Mutex};
+    use std::thread;
 
     pub enum MusicCommand {
         Stop,
-        Play(String),
+        PlayUrl(String),
+        PlayFile(String),
     }
 
-    pub struct WavPlayer {
-        sender: Option<Sender<MusicCommand>>,
+    pub trait Music {
+        fn play(&mut self, source: String);
+        fn stop(&mut self);
+    }
+
+    struct PlayerState {
+        pipeline: Option<Pipeline>,
+        sink: Option<Sink>,
     }
 
     pub struct RadioPlayer {
         sender: Option<Sender<MusicCommand>>,
+        state: Arc<Mutex<PlayerState>>,
+    }
+
+    pub struct WavPlayer {
+        sender: Option<Sender<MusicCommand>>,
+        state: Arc<Mutex<PlayerState>>,
     }
 
     impl RadioPlayer {
         pub fn new() -> Self {
             gstreamer::init().unwrap();
-            RadioPlayer { sender: None }
+            RadioPlayer {
+                sender: None,
+                state: Arc::new(Mutex::new(PlayerState {
+                    pipeline: None,
+                    sink: None,
+                })),
+            }
         }
 
-        pub fn start(&mut self, command: MusicCommand) {
+        fn start(&mut self, command: MusicCommand) {
             if let Some(sender) = &self.sender {
                 let _ = sender.send(MusicCommand::Stop);
             }
             let (sender, receiver) = channel();
             self.sender = Some(sender.clone());
+            let pipeline = Pipeline::new(None);
+            let uridecodebin = ElementFactory::make("uridecodebin", None).unwrap();
+            let audioconvert = ElementFactory::make("audioconvert", None).unwrap();
+            let audioresample = ElementFactory::make("audioresample", None).unwrap();
+            let autoaudiosink = ElementFactory::make("autoaudiosink", None).unwrap();
 
             thread::spawn(move || {
-                let pipeline = Pipeline::new(None);
-                let uridecodebin = ElementFactory::make("uridecodebin", None).unwrap();
-                let audioconvert = ElementFactory::make("audioconvert", None).unwrap();
-                let audioresample = ElementFactory::make("audioresample", None).unwrap();
-                let autoaudiosink = ElementFactory::make("autoaudiosink", None).unwrap();
-
-                if pipeline.add_many(&[&uridecodebin, &audioconvert, &audioresample, &autoaudiosink]).is_err() {
-                    eprintln!("Failed to add elements to pipeline");
-                    return;
-                }
-                if gstreamer::Element::link_many(&[&audioconvert, &audioresample, &autoaudiosink]).is_err() {
-                    eprintln!("Failed to link elements in pipeline");
-                    return;
-                }
-
-                uridecodebin.connect_pad_added(move |_element, src_pad| {
-                    let sink_pad = audioconvert.static_pad("sink").unwrap();
-                    if src_pad.link(&sink_pad).is_err() {
-                        eprintln!("Failed to link src pad to sink pad");
-                    }
-                });
-
                 match command {
-                    MusicCommand::Play(url) => {
-                        println!("[INFO] play radio");
+                    MusicCommand::PlayUrl(url) => {
+                        
+
+                        if pipeline.add_many(&[&uridecodebin, &audioconvert, &audioresample, &autoaudiosink]).is_err() {
+                            eprintln!("Failed to add elements to pipeline");
+                            return;
+                        }
+                        if gstreamer::Element::link_many(&[&audioconvert, &audioresample, &autoaudiosink]).is_err() {
+                            eprintln!("Failed to link elements in pipeline");
+                            return;
+                        }
+
+                        uridecodebin.connect_pad_added(move |_element, src_pad| {
+                            let sink_pad = audioconvert.static_pad("sink").unwrap();
+                            if src_pad.link(&sink_pad).is_err() {
+                                eprintln!("Failed to link src pad to sink pad");
+                            }
+                        });
+
                         if uridecodebin.set_property("uri", &url).is_err() {
                             eprintln!("Failed to set URI for URL");
                             return;
                         }
+
+                        if pipeline.set_state(State::Playing).is_err() {
+                            eprintln!("Failed to set pipeline state to Playing");
+                            return;
+                        }
+
                     }
                     _ => {}
                 }
-
-                if pipeline.set_state(State::Playing).is_err() {
-                    eprintln!("Failed to set pipeline state to Playing");
-                    return;
-                }
-
                 let bus = pipeline.bus().unwrap();
 
                 loop {
                     match receiver.try_recv() {
-                        Ok(MusicCommand::Play(_)) => {},
                         Ok(MusicCommand::Stop) | Err(TryRecvError::Disconnected) => {
-                            println!("[INFO] stop radio");
                             if pipeline.set_state(State::Null).is_err() {
                                 eprintln!("Failed to set pipeline state to Null");
                             }
                             break;
                         }
                         Err(TryRecvError::Empty) => {}
+                        _ => {}
                     }
 
                     for msg in bus.iter_timed(gstreamer::ClockTime::from_seconds(1)) {
@@ -102,28 +121,22 @@ pub mod music {
                             _ => (),
                         }
                     }
-                }
-            });
-        }
-
-        pub fn play_url(&mut self, url: String) {
-            self.start(MusicCommand::Play(url));
-        }
-
-        pub fn stop(&mut self) {
-            if let Some(sender) = &self.sender {
-                let _ = sender.send(MusicCommand::Stop);
-            }
+                }});
         }
     }
 
-    
     impl WavPlayer {
         pub fn new() -> Self {
-            WavPlayer { sender: None }
+            WavPlayer {
+                sender: None,
+                state: Arc::new(Mutex::new(PlayerState {
+                    pipeline: None,
+                    sink: None,
+                })),
+            }
         }
 
-        pub fn start(&mut self, command: MusicCommand) {
+        fn start(&mut self, command: MusicCommand) {
             if let Some(sender) = &self.sender {
                 let _ = sender.send(MusicCommand::Stop);
             }
@@ -134,34 +147,48 @@ pub mod music {
                 let (_stream, stream_handle) = OutputStream::try_default().unwrap();
                 let sink = Sink::try_new(&stream_handle).unwrap();
 
-
                 match command {
-                    MusicCommand::Play(file_path) => {
+                    MusicCommand::PlayFile(file_path) => {
                         println!("[INFO] play music");
                         let file = BufReader::new(File::open(file_path).unwrap());
                         let source = Decoder::new(file).unwrap();
                         sink.append(source);
                     }
-                    _ => {},
+                    _ => {}
                 }
+
                 loop {
-                    match receiver.recv().unwrap() {
-                        MusicCommand::Play(_) => {},
-                        MusicCommand::Stop => {
-                            println!("[INFO] stop music");
+                    match receiver.try_recv() {
+                        Ok(MusicCommand::Stop) | Err(TryRecvError::Disconnected) => {
                             sink.stop();
                             break;
                         }
+                        Err(TryRecvError::Empty) => {}
+                        _ => {}
                     }
                 }
             });
         }
+    }
 
-        pub fn play_file(&mut self, file_path: String) {
-            self.start(MusicCommand::Play(file_path));
+    impl Music for RadioPlayer {
+        fn play(&mut self, url: String) {
+            self.start(MusicCommand::PlayUrl(url));
         }
 
-        pub fn stop(&mut self) {
+        fn stop(&mut self) {
+            if let Some(sender) = &self.sender {
+                let _ = sender.send(MusicCommand::Stop);
+            }
+        }
+    }
+
+    impl Music for WavPlayer {
+        fn play(&mut self, file_path: String) {
+            self.start(MusicCommand::PlayFile(file_path));
+        }
+
+        fn stop(&mut self) {
             if let Some(sender) = &self.sender {
                 let _ = sender.send(MusicCommand::Stop);
             }
