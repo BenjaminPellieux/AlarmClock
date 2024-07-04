@@ -9,7 +9,7 @@ pub mod view {
     use std::{thread, time};
     use chrono::prelude::*;
     use crate::modelmod::model::{AlarmClock, Horaire, Radio, RadioStation};
-    use crate::musicmod::music::MusicPlayer;
+    use crate::musicmod::music::{WavPlayer, RadioPlayer};
     use crate::widgetmod::ihm::Widgets;
 
     
@@ -23,8 +23,9 @@ pub mod view {
         current_radio: Arc<Mutex<Radio>>,
         horaire: Arc<Mutex<Horaire>>,
         sender: Sender<()>,
-        music_player: Arc<Mutex<MusicPlayer>>,
-        player_status: bool 
+        radio_player: Arc<Mutex<RadioPlayer>>,
+        wav_player : Arc<Mutex<WavPlayer>>,
+        player_status: bool,
     }
 
     impl View {
@@ -34,8 +35,9 @@ pub mod view {
             let alarms: Vec<AlarmClock> = vec![];
             let current_radio: Arc<Mutex<Radio>> = Arc::new(Mutex::new(Radio::new()));
             let horaire: Arc<Mutex<Horaire>> = Arc::new(Mutex::new(Horaire::new()));
-            let music_player: Arc<Mutex<MusicPlayer>> = Arc::new(Mutex::new(MusicPlayer::new()));
-            let player_status = false;
+            let radio_player: Arc<Mutex<RadioPlayer>> = Arc::new(Mutex::new(RadioPlayer::new()));
+            let wav_player: Arc<Mutex<WavPlayer>> = Arc::new(Mutex::new(WavPlayer::new()));
+            let player_status: bool = false;
 
             let mut view: View = Self {
                 widgets: Arc::new(widgets),
@@ -43,7 +45,8 @@ pub mod view {
                 current_radio,
                 horaire,
                 sender,
-                music_player,
+                radio_player,
+                wav_player,
                 player_status,
             };
             view.connect_receiver(receiver);
@@ -420,17 +423,18 @@ pub mod view {
         fn start_player(&mut self, radio : bool, file_path: String){
             self.player_status = true;
             let current_radio: Arc<Mutex<Radio>> = self.current_radio.clone();
-            let music_player: Arc<Mutex<MusicPlayer>> = self.music_player.clone();
+            let radio_player: Arc<Mutex<RadioPlayer>> = self.radio_player.clone();
+            let wav_player: Arc<Mutex<WavPlayer>> = self.wav_player.clone();
             gtk::glib::MainContext::default().spawn_local(async move {
                 if radio {
                     if let Some(url) = current_radio.lock().unwrap().get_url() {
                             println!("[DEBUG] Calling play_url with URL: {}", url);
-                            music_player.lock().unwrap().play_url(url.to_string());
+                            radio_player.lock().unwrap().play_url(url.to_string());
                         } else {
                             println!("No radio selected");
                         }
                 }else{
-                    music_player.lock().unwrap().play_file(file_path);
+                    wav_player.lock().unwrap().play_file(file_path);
 
                 }
             });     
@@ -448,11 +452,20 @@ pub mod view {
         }
 
         pub fn on_arret_clicked(&mut self) {
-            self.player_status = false;
-            let music_player: Arc<Mutex<MusicPlayer>> = self.music_player.clone();
-            gtk::glib::MainContext::default().spawn_local(async move {
-                music_player.lock().unwrap().stop();
-            });
+            if self.player_status{
+                println!("[INFO] Stop Radio");
+                self.player_status = false;
+                let radio_player: Arc<Mutex<RadioPlayer>> = self.radio_player.clone();
+                gtk::glib::MainContext::default().spawn_local(async move {
+                    radio_player.lock().unwrap().stop();
+                });
+            }else{
+                println!("[INFO] Stop Music");
+                let wav_player: Arc<Mutex<WavPlayer>> = self.wav_player.clone();
+                gtk::glib::MainContext::default().spawn_local(async move {
+                    wav_player.lock().unwrap().stop();
+                });
+            }
         }
 
 
