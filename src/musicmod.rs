@@ -14,10 +14,16 @@ pub mod music {
     }
 
     pub trait Music {
+        /// Joue une source de musique.
+        ///
+        /// # Parameters
+        ///
+        /// * `source`: Le chemin ou l'URL de la source de musique.
         fn play(&mut self, source: String);
+
+        /// Arrête la lecture de la musique.
         fn stop(&mut self);
     }
-
 
     pub struct RadioPlayer {
         sender: Option<Sender<MusicCommand>>,
@@ -28,14 +34,23 @@ pub mod music {
     }
 
     impl RadioPlayer {
+        /// Crée une nouvelle instance de `RadioPlayer`.
+        ///
+        /// # Returns
+        ///
+        /// Une nouvelle instance de `RadioPlayer`.
         pub fn new() -> Self {
             gstreamer::init().unwrap();
             RadioPlayer {
                 sender: None,
-
             }
         }
 
+        /// Démarre la lecture de la musique en fonction de la commande donnée.
+        ///
+        /// # Parameters
+        ///
+        /// * `command`: La commande de lecture de musique (URL ou fichier).
         fn start(&mut self, command: MusicCommand) {
             if let Some(sender) = &self.sender {
                 let _ = sender.send(MusicCommand::Stop);
@@ -51,8 +66,6 @@ pub mod music {
             thread::spawn(move || {
                 match command {
                     MusicCommand::PlayUrl(url) => {
-                        
-
                         if pipeline.add_many(&[&uridecodebin, &audioconvert, &audioresample, &autoaudiosink]).is_err() {
                             eprintln!("Failed to add elements to pipeline");
                             return;
@@ -78,7 +91,6 @@ pub mod music {
                             eprintln!("Failed to set pipeline state to Playing");
                             return;
                         }
-
                     }
                     _ => {}
                 }
@@ -111,18 +123,28 @@ pub mod music {
                             _ => (),
                         }
                     }
-                }});
+                }
+            });
         }
     }
 
     impl WavPlayer {
+        /// Crée une nouvelle instance de `WavPlayer`.
+        ///
+        /// # Returns
+        ///
+        /// Une nouvelle instance de `WavPlayer`.
         pub fn new() -> Self {
             WavPlayer {
                 sender: None,
-
             }
         }
 
+        /// Démarre la lecture de la musique en fonction de la commande donnée.
+        ///
+        /// # Parameters
+        ///
+        /// * `command`: La commande de lecture de musique (URL ou fichier).
         fn start(&mut self, command: MusicCommand) {
             if let Some(sender) = &self.sender {
                 let _ = sender.send(MusicCommand::Stop);
@@ -159,10 +181,16 @@ pub mod music {
     }
 
     impl Music for RadioPlayer {
+        /// Joue une URL de musique.
+        ///
+        /// # Parameters
+        ///
+        /// * `url`: L'URL de la musique à jouer.
         fn play(&mut self, url: String) {
             self.start(MusicCommand::PlayUrl(url));
         }
 
+        /// Arrête la lecture de la musique.
         fn stop(&mut self) {
             if let Some(sender) = &self.sender {
                 let _ = sender.send(MusicCommand::Stop);
@@ -171,10 +199,16 @@ pub mod music {
     }
 
     impl Music for WavPlayer {
+        /// Joue un fichier de musique.
+        ///
+        /// # Parameters
+        ///
+        /// * `file_path`: Le chemin du fichier de musique à jouer.
         fn play(&mut self, file_path: String) {
             self.start(MusicCommand::PlayFile(file_path));
         }
 
+        /// Arrête la lecture de la musique.
         fn stop(&mut self) {
             if let Some(sender) = &self.sender {
                 let _ = sender.send(MusicCommand::Stop);

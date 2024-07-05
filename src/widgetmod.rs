@@ -1,7 +1,8 @@
-pub mod ihm{
+pub mod ihm {
     use gtk::{Box, Button, Entry, Frame, Label, Orientation, RadioButton, SpinButton, CheckButton};
-    
-   #[derive(Clone)]
+
+    /// Structure contenant tous les widgets de l'application.
+    #[derive(Clone)]
     pub struct Widgets {
         pub g_alarm_clock: Frame,
         pub g_alarm_clock_tab: Frame,
@@ -27,8 +28,12 @@ pub mod ihm{
         pub days_checkbuttons: Vec<CheckButton>, // Checkboxes for each day of the week
     }
 
-
     impl Widgets {
+        /// Crée une nouvelle instance de `Widgets` et initialise tous les composants de l'interface utilisateur.
+        ///
+        /// # Returns
+        ///
+        /// Une nouvelle instance de `Widgets` avec tous les composants initialisés.
         pub fn new() -> Self {
             let p_rad_b1 = RadioButton::with_label("France Info");
             let p_rad_b2 = RadioButton::with_label_from_widget(&p_rad_b1, "France Inter");
@@ -45,6 +50,7 @@ pub mod ihm{
                 CheckButton::with_label("Sam"),
                 CheckButton::with_label("Dim"),
             ];
+
             Widgets {
                 g_alarm_clock: Frame::new(Some("Nouveau réveil")),
                 g_alarm_clock_tab: Frame::new(Some("Réveil")),

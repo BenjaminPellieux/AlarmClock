@@ -13,10 +13,7 @@ pub mod view {
     use crate::musicmod::music::{WavPlayer, RadioPlayer, Music};
     use crate::widgetmod::ihm::Widgets;
 
-    
-
-
-
+    /// Structure représentant la vue de l'application.
     #[derive(Clone)]
     pub struct View {
         widgets: Arc<Widgets>,
@@ -25,22 +22,27 @@ pub mod view {
         horaire: Arc<Mutex<Horaire>>,
         sender: Sender<()>,
         radio_player: Arc<Mutex<RadioPlayer>>,
-        wav_player : Arc<Mutex<WavPlayer>>,
+        wav_player: Arc<Mutex<WavPlayer>>,
         player_status: bool,
     }
 
     impl View {
+        /// Crée une nouvelle instance de `View`.
+        ///
+        /// # Returns
+        ///
+        /// Une nouvelle instance de `View`.
         pub fn new() -> Self {
             let (sender, receiver) = unbounded();
-            let widgets: Widgets = Widgets::new();
-            let alarms: Vec<AlarmClock> = vec![];
-            let current_radio: Arc<Mutex<Radio>> = Arc::new(Mutex::new(Radio::new()));
-            let horaire: Arc<Mutex<Horaire>> = Arc::new(Mutex::new(Horaire::new()));
-            let radio_player: Arc<Mutex<RadioPlayer>> = Arc::new(Mutex::new(RadioPlayer::new()));
-            let wav_player: Arc<Mutex<WavPlayer>> = Arc::new(Mutex::new(WavPlayer::new()));
-            let player_status: bool = false;
+            let widgets = Widgets::new();
+            let alarms = vec![];
+            let current_radio = Arc::new(Mutex::new(Radio::new()));
+            let horaire = Arc::new(Mutex::new(Horaire::new()));
+            let radio_player = Arc::new(Mutex::new(RadioPlayer::new()));
+            let wav_player = Arc::new(Mutex::new(WavPlayer::new()));
+            let player_status = false;
 
-            let mut view: View = Self {
+            let mut view = Self {
                 widgets: Arc::new(widgets),
                 alarms,
                 current_radio,
@@ -54,89 +56,100 @@ pub mod view {
             view
         }
 
-    
-
-        fn update_alarm_id(&mut self){
-            let mut count:  usize = 0;
-            for alarm in self.alarms.iter_mut(){
+        /// Met à jour l'identifiant des alarmes.
+        fn update_alarm_id(&mut self) {
+            let mut count = 0;
+            for alarm in self.alarms.iter_mut() {
                 alarm.a_id = count;
-                count+=1;
+                count += 1;
             }
         }
-        fn add_alarms(&mut self){
-            
-            let _res: () = match self.load_alarms() {
-                Ok(_res) => println!("[INFO]  File loaded"),
+
+        /// Ajoute des alarmes en les chargeant depuis le fichier de sauvegarde.
+        fn add_alarms(&mut self) {
+            let _res = match self.load_alarms() {
+                Ok(_res) => println!("[INFO] File loaded"),
                 Err(error) => println!("[ERROR] Failed to load alarms {error:?}"),
             };
-            let mut days: [bool; 7] = [false; 7];
+            let mut days = [false; 7];
             for (i, day_checkbox) in self.widgets.days_checkbuttons.iter().enumerate() {
                 days[i] = day_checkbox.is_active();
-
             }
-            let name_alarm: String  = self.widgets.i_name_ac.text().to_string();
-            let url_song: String  = self.widgets.i_song_link.text().to_string();
+            let name_alarm = self.widgets.i_name_ac.text().to_string();
+            let url_song = self.widgets.i_song_link.text().to_string();
             let tmp_alarm: AlarmClock;
-            if url_song.eq(&"") && !self.current_radio.lock().unwrap().selected_radio.is_some() {
+            if url_song.is_empty() && self.current_radio.lock().unwrap().selected_radio.is_none() {
                 println!("[ERROR] No song URL & No radio selected");
-                 
+            } else if !url_song.is_empty() {
+                tmp_alarm = AlarmClock::new(
+                    self.alarms.len(),
+                    name_alarm,
+                    self.widgets.s_heur_box.value() as u8,
+                    self.widgets.s_min_box.value() as u8,
+                    self.widgets.s_sec_box.value() as u8,
+                    url_song,
+                    false,
+                    None,
+                    days,
+                );
+                self.alarms.push(tmp_alarm);
+            } else {
+                tmp_alarm = AlarmClock::new(
+                    self.alarms.len(),
+                    name_alarm,
+                    self.widgets.s_heur_box.value() as u8,
+                    self.widgets.s_min_box.value() as u8,
+                    self.widgets.s_sec_box.value() as u8,
+                    "".to_string(),
+                    true,
+                    self.current_radio.lock().unwrap().selected_radio.clone(),
+                    days.clone(),
+                );
+                self.alarms.push(tmp_alarm);
             }
-            else if  url_song.ne(&"") {
-                tmp_alarm = AlarmClock::new(self.alarms.len(), name_alarm, 
-                                            self.widgets.s_heur_box.value() as u8,
-                                            self.widgets.s_min_box.value() as u8,
-                                            self.widgets.s_sec_box.value() as u8,
-                                            url_song, false, 
-                                            None,
-                                            days);
-                self.alarms.push(tmp_alarm);
-
-            }else{
-                tmp_alarm = AlarmClock::new(self.alarms.len(), name_alarm, self.widgets.s_heur_box.value() as u8,
-                                            self.widgets.s_min_box.value() as u8,
-                                            self.widgets.s_sec_box.value() as u8,
-                                            "".to_string(), true, 
-                                            self.current_radio.lock().unwrap().selected_radio.clone(),
-                                            days.clone());
-                self.alarms.push(tmp_alarm);
-            }   
-            
         }
 
-
-        fn save_alarms(&mut self) -> io::Result<()>{
-            let alarms: &Vec<AlarmClock>  = &self.alarms;
-            let serialized: String = serde_json::to_string(&*alarms)?;
-            let mut file: File = File::create("ser/alarms.json")?;
+        /// Sauvegarde les alarmes dans un fichier.
+        ///
+        /// # Returns
+        ///
+        /// `io::Result<()>` - Résultat de l'opération de sauvegarde.
+        fn save_alarms(&mut self) -> io::Result<()> {
+            let alarms = &self.alarms;
+            let serialized = serde_json::to_string(&*alarms)?;
+            let mut file = File::create("ser/alarms.json")?;
             file.write_all(serialized.as_bytes())?;
             Ok(())
         }
 
-
+        /// Charge les alarmes depuis un fichier.
+        ///
+        /// # Returns
+        ///
+        /// `io::Result<()>` - Résultat de l'opération de chargement.
         pub fn load_alarms(&mut self) -> io::Result<()> {
-            let mut file: File = File::open("ser/alarms.json").unwrap_or_else(|_| File::create("ser/alarms.json").unwrap());
-            let mut contents: String = String::new();
+            let mut file = File::open("ser/alarms.json").unwrap_or_else(|_| File::create("ser/alarms.json").unwrap());
+            let mut contents = String::new();
             file.read_to_string(&mut contents)?;
             if !contents.is_empty() {
                 let alarms: Vec<AlarmClock> = serde_json::from_str(&contents)?;
                 self.alarms = alarms.to_vec();
-            }else{
+            } else {
                 self.alarms = Vec::new();
-                println!("[INFO] No alarms finded ");
+                println!("[INFO] No alarms found");
             }
             self.update_alarm_id();
             Ok(())
         }
 
+        /// Met à jour l'affichage des alarmes.
         fn update_alarms_display(&mut self) {
             self.widgets.alarms_container.foreach(|child: &gtk::Widget| self.widgets.alarms_container.remove(child));
             for alarm in self.alarms.iter() {
-                
-                let vbox_alarm: Box = Box::new(Orientation::Vertical, 5);
+                let vbox_alarm = Box::new(Orientation::Vertical, 5);
                 vbox_alarm.set_widget_name("box-alarm");
-                let hbox_alarm: Box = Box::new(Orientation::Horizontal, 5);
-                let hbox_days: Box = Box::new(Orientation::Horizontal, 5);
-
+                let hbox_alarm = Box::new(Orientation::Horizontal, 5);
+                let hbox_days = Box::new(Orientation::Horizontal, 5);
 
                 let hour_label = Label::new(Some(&format!("{:02}", alarm.horaire.hour)));
                 let min_label = Label::new(Some(&format!("{:02}", alarm.horaire.minute)));
@@ -156,53 +169,52 @@ pub mod view {
                 hbox_alarm.pack_start(&link_label, true, true, 0);
                 hbox_alarm.pack_start(&alamrm_name, true, true, 0);
     
-                        // Display days
-                let days: [&str; 7] = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+                // Affichage des jours
+                let days = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
                 for (i, &day) in days.iter().enumerate() {
-                    let day_label: Label = Label::new(Some(day));
-                    let day_checkbox: CheckButton = CheckButton::new();
+                    let day_label = Label::new(Some(day));
+                    let day_checkbox = CheckButton::new();
                     day_checkbox.set_active(alarm.days[i]);
                     day_checkbox.set_sensitive(false);
                     hbox_days.pack_start(&day_label, true, true, 0);
                     hbox_days.pack_start(&day_checkbox, true, true, 0);
                 }
 
-                
-
-                let delete_button: Button = Button::with_label("Supprimer");
-                let active_radio: CheckButton = CheckButton::with_label("Active");
+                let delete_button = Button::with_label("Supprimer");
+                let active_radio = CheckButton::with_label("Active");
                 active_radio.set_active(alarm.active);
-                let delete_alarm_id: usize = alarm.a_id;
-                let view_rc: Arc<Mutex<View>> = Arc::new(Mutex::new(self.clone()));
+                let delete_alarm_id = alarm.a_id;
+                let view_rc = Arc::new(Mutex::new(self.clone()));
 
                 delete_button.connect_clicked(move |_| {
-                    let mut view: MutexGuard<View> = view_rc.lock().unwrap();
+                    let mut view = view_rc.lock().unwrap();
                     view.delete_alarm(delete_alarm_id);
                 });
 
-                let view_rc: Arc<Mutex<View>> = Arc::new(Mutex::new(self.clone()));
+                let view_rc = Arc::new(Mutex::new(self.clone()));
                 active_radio.connect_clicked(move |_| {
-                    let mut view: MutexGuard<View> = view_rc.lock().unwrap();
+                    let mut view = view_rc.lock().unwrap();
                     view.alarm_status(delete_alarm_id);
                 });
-                
 
                 hbox_alarm.pack_start(&active_radio, false, false, 0);
                 hbox_alarm.pack_start(&delete_button, false, false, 0);
                 vbox_alarm.add(&hbox_alarm);
                 vbox_alarm.add(&hbox_days);
-                self.widgets.alarms_container.add(&vbox_alarm,);
+                self.widgets.alarms_container.add(&vbox_alarm);
             }
 
             self.widgets.alarms_container.show_all();
-
-
         }
 
-
+        /// Met à jour l'état d'une alarme (active ou non).
+        ///
+        /// # Parameters
+        ///
+        /// * `alarm_id` - Identifiant de l'alarme à mettre à jour.
         fn alarm_status(&mut self, alarm_id: usize) {
-            for alarm in self.alarms.iter_mut(){
-                if alarm.a_id == alarm_id{
+            for alarm in self.alarms.iter_mut() {
+                if alarm.a_id == alarm_id {
                     alarm.active = !alarm.active;
                 }
             }
@@ -211,25 +223,38 @@ pub mod view {
             self.update_alarms_display();
         }
 
-        fn delet_song(&mut self, path: String){
+        /// Supprime une chanson en fonction du chemin fourni.
+        ///
+        /// # Parameters
+        ///
+        /// * `path` - Chemin de la chanson à supprimer.
+        fn delet_song(&mut self, path: String) {
             let _ = remove_file(path);
         }
 
+        /// Supprime une alarme en fonction de son identifiant.
+        ///
+        /// # Parameters
+        ///
+        /// * `alarm_id` - Identifiant de l'alarme à supprimer.
         fn delete_alarm(&mut self, alarm_id: usize) {
-            if let Some(index) =  self.alarms.iter().position(|alarm: &AlarmClock| alarm.a_id == alarm_id){
-                if !self.alarms[index].is_radio{
+            if let Some(index) = self.alarms.iter().position(|alarm: &AlarmClock| alarm.a_id == alarm_id) {
+                if !self.alarms[index].is_radio {
                     self.delet_song(self.alarms[index].song_path.clone());
                 }
                 self.alarms.remove(index);
                 self.save_alarms().expect("Failed to save alarms");
                 self.update_alarms_display();
             }
-
-           
         }
 
+        /// Construit l'interface utilisateur de l'application.
+        ///
+        /// # Parameters
+        ///
+        /// * `window` - Fenêtre principale de l'application.
         pub fn build_ui(&mut self, window: &ApplicationWindow) {
-            let provider: CssProvider = CssProvider::new();
+            let provider = CssProvider::new();
             provider.load_from_path("style/styleapp.css").expect("Failed to load CSS");
 
             StyleContext::add_provider_for_screen(
@@ -276,13 +301,12 @@ pub mod view {
             hbox_reveil.pack_start(&self.widgets.s_sec_box, true, true, 0);
             hbox_reveil.pack_start(&Label::new(Some("Sec")), false, false, 0);
             self.widgets.i_name_ac.set_placeholder_text("Nom de l'alarme".into());
-            self.widgets.i_song_link.set_placeholder_text("URL de la music".into());
+            self.widgets.i_song_link.set_placeholder_text("URL de la musique".into());
             hbox_reveil.pack_start(&self.widgets.i_name_ac, true, true, 0);
             hbox_reveil.pack_start(&self.widgets.p_cancel, true, true, 0);
             hbox_reveil.pack_start(&self.widgets.p_save, true, true, 0);
             
-
-            // Add checkboxes for days
+            // Ajouter des cases à cocher pour les jours
             for day_checkbox in self.widgets.days_checkbuttons.iter() {
                 hbox_days.pack_start(day_checkbox, true, true, 0);
             }
@@ -300,50 +324,51 @@ pub mod view {
 
             window.add(&vbox);
             
-            // Update the time every second
+            // Met à jour les alarmes et le temps
             self.update_alarms_display();
-            unsafe{self.update_time_labels()};
+            unsafe { self.update_time_labels() };
         }
 
+        /// Connecte les signaux aux boutons et autres widgets.
         pub fn connect_signals(&mut self) {
-            let view_rc: Arc<Mutex<View>> = Arc::new(Mutex::new(self.clone()));
+            let view_rc = Arc::new(Mutex::new(self.clone()));
 
-            // Marche button
+            // Bouton Marche
             let view_clone = view_rc.clone();
             self.widgets.p_button_marche.connect_clicked(move |_| {
                 let mut view = view_clone.lock().unwrap();
                 view.on_marche_clicked();
             });
 
-            // Arrêt button
+            // Bouton Arrêt
             let view_clone = view_rc.clone();
             self.widgets.p_button_arret.connect_clicked(move |_| {
                 let mut view = view_clone.lock().unwrap();
                 view.on_arret_clicked();
             });
 
-            // Ajouter un réveil button
+            // Bouton Ajouter un réveil
             let view_clone = view_rc.clone();
             self.widgets.p_button_add_alarm_clock.connect_clicked(move |_| {
                 let view = view_clone.lock().unwrap();
                 view.on_new_alarm_clicked();
             });
 
-            // Save button
+            // Bouton Sauvegarder
             let view_clone = view_rc.clone();
             self.widgets.p_save.connect_clicked(move |_| {
                 let mut view = view_clone.lock().unwrap();
                 view.on_save_clicked();
             });
 
-            // Cancel button
+            // Bouton Annuler
             let view_clone = view_rc.clone();
             self.widgets.p_cancel.connect_clicked(move |_| {
                 let view = view_clone.lock().unwrap();
                 view.on_cancel_clicked();
             });
 
-            // Radio buttons
+            // Boutons Radio
             let view_clone = view_rc.clone();
             self.widgets.p_rad_b1.connect_toggled(move |radio| {
                 if radio.is_active() {
@@ -360,7 +385,7 @@ pub mod view {
                 }
             });
 
-            let view_clone: Arc<Mutex<View>> = view_rc.clone();
+            let view_clone = view_rc.clone();
             self.widgets.p_rad_b3.connect_toggled(move |radio| {
                 if radio.is_active() {
                     let mut view = view_clone.lock().unwrap();
@@ -385,9 +410,9 @@ pub mod view {
             });
         }
 
+        /// Vérifie les alarmes et déclenche celles qui sont actives à l'heure actuelle.
         pub fn check_alarms(&mut self) {
-            
-            let _res: () = match self.load_alarms() {
+            let _res = match self.load_alarms() {
                 Ok(_res) => {},
                 Err(error) => println!("[ERROR] Failed to load alarms {error:?}"),
             };
@@ -408,32 +433,38 @@ pub mod view {
             }
         }
 
-
-        fn start_player(&mut self, radio : bool, file_path: String){
+        /// Démarre le lecteur de musique ou de radio.
+        ///
+        /// # Parameters
+        ///
+        /// * `radio` - Indique s'il s'agit d'une radio.
+        /// * `file_path` - Chemin du fichier à lire.
+        fn start_player(&mut self, radio: bool, file_path: String) {
             self.player_status = true;
-            let current_radio: Arc<Mutex<Radio>> = self.current_radio.clone();
-            let radio_player: Arc<Mutex<RadioPlayer>> = self.radio_player.clone();
-            let wav_player: Arc<Mutex<WavPlayer>> = self.wav_player.clone();
+            let current_radio = self.current_radio.clone();
+            let radio_player = self.radio_player.clone();
+            let wav_player = self.wav_player.clone();
             gtk::glib::MainContext::default().spawn_local(async move {
                 if radio {
                     if let Some(url) = current_radio.lock().unwrap().get_url() {
-                            radio_player.lock().unwrap().play(url.to_string());
-                        } else {
-                            println!("No radio selected");
-                        }
-                }else{
+                        radio_player.lock().unwrap().play(url.to_string());
+                    } else {
+                        println!("No radio selected");
+                    }
+                } else {
                     wav_player.lock().unwrap().play(file_path);
-
                 }
-            });     
+            });
         }
 
+        /// Arrête le lecteur de musique ou de radio.
         pub fn stop_player(&mut self) {
             self.radio_player.lock().unwrap().stop();
             self.wav_player.lock().unwrap().stop();
             self.player_status = false;
         }
 
+        /// Gestionnaire pour le clic sur le bouton Marche.
         pub fn on_marche_clicked(&mut self) {
             if self.player_status {
                 println!("[INFO] Radio already running");
@@ -442,39 +473,41 @@ pub mod view {
             self.start_player(true, "".to_string());
         }
 
+        /// Gestionnaire pour le clic sur le bouton Arrêt.
         pub fn on_arret_clicked(&mut self) {
             self.stop_player();
             println!("[INFO] Stop Radio");
         }
 
-
-
-
+        /// Affiche le formulaire pour ajouter une nouvelle alarme.
         fn on_new_alarm_clicked(&self) {
-            // Logic for adding new alarm
-            let horaire: MutexGuard<Horaire> = self.horaire.lock().unwrap();
+            let horaire = self.horaire.lock().unwrap();
             self.widgets.s_heur_box.set_value(horaire.get_hour() as f64);
             self.widgets.s_min_box.set_value(horaire.get_min() as f64);
             self.widgets.s_sec_box.set_value(horaire.get_sec() as f64);
             self.widgets.g_alarm_clock.show_all();
         }
 
+        /// Sauvegarde une nouvelle alarme.
         fn on_save_clicked(&mut self) {
-            // Logic for saving alarm
             self.add_alarms();
             self.save_alarms().expect("Failed to save alarms");
             self.update_alarms_display();
             self.widgets.g_alarm_clock.hide();
         }
 
+        /// Annule l'ajout d'une nouvelle alarme.
         pub fn on_cancel_clicked(&self) {
-            // Logic for canceling alarm
             self.widgets.g_alarm_clock.hide();
         }
 
+        /// Gestionnaire pour le clic sur un bouton radio.
+        ///
+        /// # Parameters
+        ///
+        /// * `id_radio` - Identifiant de la station de radio sélectionnée.
         pub fn on_radio_clicked(&mut self, id_radio: u8) {
-            // Logic for radio button clicked
-            match id_radio{
+            match id_radio {
                 1 => self.current_radio.lock().unwrap().selected_radio = Some(RadioStation::FranceInfo),
                 2 => self.current_radio.lock().unwrap().selected_radio = Some(RadioStation::FranceInter),
                 3 => self.current_radio.lock().unwrap().selected_radio = Some(RadioStation::RTL),
@@ -483,41 +516,45 @@ pub mod view {
                 _ => println!("Radio button {} clicked", id_radio),
             };
             println!("[INFO] Radio button {} radio status {}", id_radio, self.player_status);
-            if self.player_status{
+            if self.player_status {
                 self.on_arret_clicked();
                 thread::sleep(time::Duration::from_millis(10));
                 self.on_marche_clicked();
             }
         }
 
-
+        /// Met à jour l'heure affichée dans les labels.
         unsafe fn update_time_labels(&self) {
-            let horaire_rc: Arc<Mutex<Horaire>> = self.horaire.clone();
-            let sender: Sender<()> = self.sender.clone();
-    
+            let horaire_rc = self.horaire.clone();
+            let sender = self.sender.clone();
+
             timeout_add_seconds(1, move || {
-                let mut horaire: MutexGuard<Horaire> = horaire_rc.lock().unwrap();
+                let mut horaire = horaire_rc.lock().unwrap();
                 horaire.update_time();
-    
+
                 // Envoyer un signal pour mettre à jour les widgets
                 if let Err(e) = sender.try_send(()) {
                     eprintln!("[ERROR] Failed to send update signal: {:?}", e);
                 }
-    
+
                 ControlFlow::Continue
             });
         }
 
+        /// Connecte le récepteur de messages pour mettre à jour l'affichage de l'horloge et vérifier les alarmes.
+        ///
+        /// # Parameters
+        ///
+        /// * `receiver` - Récepteur de messages pour les mises à jour.
         fn connect_receiver(&mut self, receiver: Receiver<()>) {
-            let widgets_rc: Arc<Widgets> = self.widgets.clone();
-            let horaire_rc: Arc<Mutex<Horaire>> = self.horaire.clone();
-            let view_rc: Arc<Mutex<View>> = Arc::new(Mutex::new(self.clone()));
-            
+            let widgets_rc = self.widgets.clone();
+            let horaire_rc = self.horaire.clone();
+            let view_rc = Arc::new(Mutex::new(self.clone()));
+
             MainContext::default().spawn_local(async move {
-                
                 while let Ok(_) = receiver.recv().await {
                     view_rc.lock().unwrap().check_alarms();
-                    let horaire: MutexGuard<Horaire> = horaire_rc.lock().unwrap();
+                    let horaire = horaire_rc.lock().unwrap();
                     widgets_rc.p_lcd_heure.set_text(&format!("{:02}", horaire.get_hour()));
                     widgets_rc.p_lcd_min.set_text(&format!("{:02}", horaire.get_min()));
                     widgets_rc.p_lcd_sec.set_text(&format!("{:02}", horaire.get_sec()));

@@ -1,4 +1,3 @@
-
 pub mod model {
     use chrono::{DateTime, Local, Timelike};
     use serde::{Serialize, Deserialize};
@@ -22,12 +21,22 @@ pub mod model {
     }
 
     impl Radio {
+        /// Crée une nouvelle instance de `Radio`.
+        ///
+        /// # Returns
+        ///
+        /// Une nouvelle instance de `Radio` avec `selected_radio` initialisé à `None`.
         pub fn new() -> Self {
             Radio {
                 selected_radio: None,
             }
         }
 
+        /// Retourne l'URL de la station de radio sélectionnée.
+        ///
+        /// # Returns
+        ///
+        /// Une option contenant l'URL de la station de radio sélectionnée, ou `None` si aucune station n'est sélectionnée.
         pub fn get_url(&self) -> Option<&'static str> {
             match self.selected_radio {
                 Some(RadioStation::FranceInfo) => Some("http://direct.franceinfo.fr/live/franceinfo-midfi.mp3"),
@@ -48,6 +57,11 @@ pub mod model {
     }
 
     impl Horaire {
+        /// Crée une nouvelle instance de `Horaire` en initialisant l'heure actuelle.
+        ///
+        /// # Returns
+        ///
+        /// Une nouvelle instance de `Horaire` avec l'heure actuelle.
         pub fn new() -> Self {
             let now: SystemTime = SystemTime::now();
             let datetime: DateTime<Local> = now.into();
@@ -58,6 +72,7 @@ pub mod model {
             }
         }
 
+        /// Met à jour l'heure actuelle.
         pub fn update_time(&mut self) {
             let now: SystemTime = SystemTime::now();
             let datetime: DateTime<Local> = now.into();
@@ -66,18 +81,33 @@ pub mod model {
             self.second = datetime.second() as u8;
         }
 
-        pub fn get_hour(&self) -> u8{
-            return self.hour;
+        /// Retourne l'heure actuelle.
+        ///
+        /// # Returns
+        ///
+        /// L'heure actuelle.
+        pub fn get_hour(&self) -> u8 {
+            self.hour
         }
-        pub fn get_min(&self) -> u8{
-            return self.minute;
-        }
-        pub fn get_sec(&self) -> u8{
-            return self.second;
-        }
-       
-    }
 
+        /// Retourne les minutes actuelles.
+        ///
+        /// # Returns
+        ///
+        /// Les minutes actuelles.
+        pub fn get_min(&self) -> u8 {
+            self.minute
+        }
+
+        /// Retourne les secondes actuelles.
+        ///
+        /// # Returns
+        ///
+        /// Les secondes actuelles.
+        pub fn get_sec(&self) -> u8 {
+            self.second
+        }
+    }
 
     #[derive(Clone, Serialize, Deserialize)]
     pub struct AlarmClock {
@@ -91,34 +121,32 @@ pub mod model {
         pub name: String,
         pub days: [bool; 7],
     }
-    // https://www.youtube.com/watch?v=4qR5xmglC9g
-    // https://www.youtube.com/watch?v=GFUN4pqAhLg
-    impl AlarmClock {
-          /// Crée une nouvelle instance d'`AlarmClock`.
-            ///
-            /// # Parameters
-            ///
-            /// * `a_id`: L'identifiant de l'alarme.
-            /// * `name`: Le nom de l'alarme.
-            /// * `hour`: L'heure de l'alarme.
-            /// * `minute`: Les minutes de l'alarme.
-            /// * `second`: Les secondes de l'alarme.
-            /// * `link`: Le lien de la musique ou de la radio.
-            /// * `is_radio`: Indique si c'est une radio.
-            /// * `a_radio`: L'option de station de radio.
-            /// * `days`: Les jours de l'alarme.
-            ///
-            /// # Returns
-            ///
-            /// Une nouvelle instance d'`AlarmClock`.
-        pub fn new(a_id: usize, name: String, hour: u8, minute: u8, second: u8, link: String, is_radio: bool, a_radio: Option<RadioStation>, days: [bool; 7]) -> Self {
-            let mut song_path: String = String::new();
-            let mut song_title: String = String::new();
-            if !is_radio {
-                (song_title, song_path) = Self::get_song(a_id, link);  
-            }
 
-            
+    impl AlarmClock {
+        /// Crée une nouvelle instance d'`AlarmClock`.
+        ///
+        /// # Parameters
+        ///
+        /// * `a_id`: L'identifiant de l'alarme.
+        /// * `name`: Le nom de l'alarme.
+        /// * `hour`: L'heure de l'alarme.
+        /// * `minute`: Les minutes de l'alarme.
+        /// * `second`: Les secondes de l'alarme.
+        /// * `link`: Le lien de la musique ou de la radio.
+        /// * `is_radio`: Indique si c'est une radio.
+        /// * `a_radio`: L'option de station de radio.
+        /// * `days`: Les jours de l'alarme.
+        ///
+        /// # Returns
+        ///
+        /// Une nouvelle instance d'`AlarmClock`.
+        pub fn new(a_id: usize, name: String, hour: u8, minute: u8, second: u8, link: String, is_radio: bool, a_radio: Option<RadioStation>, days: [bool; 7]) -> Self {
+            let (song_title, song_path) = if !is_radio {
+                Self::get_song(a_id, link)
+            } else {
+                (String::new(), String::new())
+            };
+
             Self {
                 a_id,
                 name,
@@ -136,10 +164,19 @@ pub mod model {
             }
         }
 
-
-        fn get_song(a_id: usize, link: String) -> (String,String) {
-            let song_path: String = format!("song/Alarm_{}.wav", a_id);
-            let mut song_title:  String = String::new();
+        /// Télécharge la chanson à partir du lien fourni et renvoie le titre et le chemin de la chanson.
+        ///
+        /// # Parameters
+        ///
+        /// * `a_id`: L'identifiant de l'alarme.
+        /// * `link`: Le lien de la musique.
+        ///
+        /// # Returns
+        ///
+        /// Un tuple contenant le titre de la chanson et le chemin de la chanson.
+        fn get_song(a_id: usize, link: String) -> (String, String) {
+            let song_path = format!("song/Alarm_{}.wav", a_id);
+            let mut song_title = String::new();
             let status = Command::new("yt-dlp")
                 .args([
                     "--format", "bestaudio",
@@ -153,11 +190,9 @@ pub mod model {
                 .expect("[ERROR] Failed to execute yt-dlp");
 
             if status.success() {
-                // Vérifier si le fichier a été téléchargé
                 if fs::metadata(&song_path).is_ok() {
-                    // Récupérer le titre de la chanson
                     let output = Command::new("yt-dlp")
-                        .args(["--get-title", &link,"--cookies-from-browser", "firefox", "--print", "title"])
+                        .args(["--get-title", &link, "--cookies-from-browser", "firefox", "--print", "title"])
                         .output()
                         .expect("[ERROR] Failed to retrieve song title");
 
@@ -174,11 +209,22 @@ pub mod model {
             } else {
                 eprintln!("[ERROR] Failed to download music");
             }
+
             let split_title: Vec<&str> = song_title.split('\n').collect();
             song_title = split_title[0].to_string();
             (song_title, song_path)
         }
 
+        /// Compare l'heure actuelle avec l'heure de l'alarme.
+        ///
+        /// # Parameters
+        ///
+        /// * `other`: L'heure actuelle.
+        /// * `day_of_week`: Le jour de la semaine actuel.
+        ///
+        /// # Returns
+        ///
+        /// `true` si l'heure et le jour correspondent à l'alarme, `false` sinon.
         pub fn to_compare(&self, other: &Horaire, day_of_week: usize) -> bool {
             self.horaire.hour == other.hour &&
             self.horaire.minute == other.minute &&
