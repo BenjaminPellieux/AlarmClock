@@ -1,7 +1,7 @@
 pub mod ihm{
     use gtk::{Box, Button, Entry, Frame, Label, Orientation, RadioButton, SpinButton, CheckButton};
     
-   #[derive(Clone)]
+   #[derive(Clone, Debug)]
     pub struct Widgets {
         pub g_alarm_clock: Frame,
         pub g_alarm_clock_tab: Frame,

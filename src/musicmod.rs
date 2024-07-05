@@ -6,23 +6,25 @@ pub mod music {
     use std::io::BufReader;
     use std::sync::mpsc::{channel, Sender, TryRecvError};
     use std::thread;
-
+    
+    #[derive(Debug)]
     pub enum MusicCommand {
         Stop,
         PlayUrl(String),
         PlayFile(String),
     }
 
+    
     pub trait Music {
         fn play(&mut self, source: String);
         fn stop(&mut self);
     }
 
-
+    #[derive(Debug)]
     pub struct RadioPlayer {
         sender: Option<Sender<MusicCommand>>,
     }
-
+    #[derive(Debug)]
     pub struct WavPlayer {
         sender: Option<Sender<MusicCommand>>,
     }
