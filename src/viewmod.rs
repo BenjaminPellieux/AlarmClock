@@ -144,7 +144,7 @@ pub mod view {
                 hour_label.set_widget_name("label-large");
                 min_label.set_widget_name("label-large");
                 sec_label.set_widget_name("label-large");
-                let link_label = Label::new(Some(&alarm.song));
+                let link_label = Label::new(Some(&alarm.song_title));
                 let alamrm_name = Label::new(Some(&alarm.name));
                 
                 hbox_alarm.pack_start(&hour_label, true, true, 0);
@@ -218,7 +218,7 @@ pub mod view {
         fn delete_alarm(&mut self, alarm_id: usize) {
             if let Some(index) =  self.alarms.iter().position(|alarm: &AlarmClock| alarm.a_id == alarm_id){
                 if !self.alarms[index].is_radio{
-                    self.delet_song(self.alarms[index].song.clone());
+                    self.delet_song(self.alarms[index].song_path.clone());
                 }
                 self.alarms.remove(index);
                 self.save_alarms().expect("Failed to save alarms");
@@ -401,7 +401,7 @@ pub mod view {
                         self.start_player(true, "".to_string());
                         break;
                     } else {
-                        self.start_player(false, alarm.song.clone());
+                        self.start_player(false, alarm.song_path.clone());
                         break;
                     }
                 }
