@@ -1,7 +1,7 @@
 pub mod view {
     use gtk::prelude::*;
     use gtk::{CssProvider, StyleContext, ApplicationWindow, Box, Button, Label, Orientation, glib, CheckButton};
-    use std::sync::{Arc, Mutex, MutexGuard};
+    use std::sync::{Arc, Mutex};
     use async_channel::{unbounded, Receiver, Sender};
     use glib::{timeout_add_seconds, MainContext, ControlFlow};
     use std::fs::{File, remove_file};

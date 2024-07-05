@@ -34,8 +34,8 @@ L'Alarm Clock Application est une application de réveil développée en Rust, u
 
 4. **Cloner le Répertoire du Projet** :
    ```sh
-   git clone https://github.com/votre-utilisateur/alarm-clock-app.git
-   cd alarm-clock-app
+   git clone https://github.com/BenjaminPellieux/AlarmClock.git
+   cd AlarmClock
    ```
 
 5. **Construire le Projet** :
