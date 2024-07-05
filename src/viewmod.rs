@@ -239,7 +239,7 @@ pub mod view {
             );
         
             window.set_title("Alarm Clock");
-            window.set_default_size(600, 600);
+            window.set_default_size(600, 800);
 
             let vbox = Box::new(Orientation::Vertical, 10);
 
@@ -388,7 +388,7 @@ pub mod view {
         pub fn check_alarms(&mut self) {
             
             let _res: () = match self.load_alarms() {
-                Ok(_res) => println!("[INFO]  File loaded"),
+                Ok(_res) => {},
                 Err(error) => println!("[ERROR] Failed to load alarms {error:?}"),
             };
 
@@ -428,33 +428,25 @@ pub mod view {
             });     
         }
 
+        pub fn stop_player(&mut self) {
+            self.radio_player.lock().unwrap().stop();
+            self.wav_player.lock().unwrap().stop();
+            self.player_status = false;
+        }
+
         pub fn on_marche_clicked(&mut self) {
-            if self.player_status{
-                println!("[INFO] Radio already runnning");
-                self.on_arret_clicked();
-                thread::sleep(time::Duration::from_millis(10));
-                return;
+            if self.player_status {
+                println!("[INFO] Radio already running");
+                self.stop_player();
             }
             self.start_player(true, "".to_string());
-            
         }
 
         pub fn on_arret_clicked(&mut self) {
-            if self.player_status{
-                println!("[INFO] Stop Radio");
-                self.player_status = false;
-                let radio_player: Arc<Mutex<RadioPlayer>> = self.radio_player.clone();
-                gtk::glib::MainContext::default().spawn_local(async move {
-                    radio_player.lock().unwrap().stop();
-                });
-            }else{
-                println!("[INFO] Stop Music");
-                let wav_player: Arc<Mutex<WavPlayer>> = self.wav_player.clone();
-                gtk::glib::MainContext::default().spawn_local(async move {
-                    wav_player.lock().unwrap().stop();
-                });
-            }
+            self.stop_player();
+            println!("[INFO] Stop Radio");
         }
+
 
 
 
@@ -490,7 +482,7 @@ pub mod view {
                 5 => self.current_radio.lock().unwrap().selected_radio = Some(RadioStation::Skyrock),
                 _ => println!("Radio button {} clicked", id_radio),
             };
-            println!("Radio button {} clicked \n radio status {}", id_radio, self.player_status);
+            println!("[INFO] Radio button {} radio status {}", id_radio, self.player_status);
             if self.player_status{
                 self.on_arret_clicked();
                 thread::sleep(time::Duration::from_millis(10));
@@ -498,17 +490,20 @@ pub mod view {
             }
         }
 
+
         unsafe fn update_time_labels(&self) {
             let horaire_rc: Arc<Mutex<Horaire>> = self.horaire.clone();
             let sender: Sender<()> = self.sender.clone();
-            
+    
             timeout_add_seconds(1, move || {
                 let mut horaire: MutexGuard<Horaire> = horaire_rc.lock().unwrap();
                 horaire.update_time();
-
+    
                 // Envoyer un signal pour mettre à jour les widgets
-                let _ = sender.send(());
-                
+                if let Err(e) = sender.try_send(()) {
+                    eprintln!("[ERROR] Failed to send update signal: {:?}", e);
+                }
+    
                 ControlFlow::Continue
             });
         }

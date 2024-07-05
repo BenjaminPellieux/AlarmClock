@@ -5,7 +5,7 @@ pub mod model {
     use std::time::SystemTime;
     use std::process::Command;
 
-    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[derive(Clone, Serialize, Deserialize)]
     pub enum RadioStation {
         FranceInfo,
         FranceInter,
@@ -14,7 +14,7 @@ pub mod model {
         Skyrock,
     }
 
-    #[derive(Clone, Debug)]
+    #[derive(Clone)]
     pub struct Radio {
         pub selected_radio: Option<RadioStation>,
     }
@@ -38,7 +38,7 @@ pub mod model {
         }
     }
 
-    #[derive(Clone, Debug, Serialize, Deserialize)]
+    #[derive(Clone, Serialize, Deserialize)]
     pub struct Horaire {
         pub hour: u8,
         pub minute: u8,
@@ -77,7 +77,7 @@ pub mod model {
     }
 
 
-    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[derive(Clone, Serialize, Deserialize)]
     pub struct AlarmClock {
         pub horaire: Horaire,
         pub active: bool,
