@@ -19,29 +19,68 @@ L'Alarm Clock Application est une application de réveil développée en Rust, u
 - yt-dlp
 - Navigateur Firefox (pour les cookies)
 
+Voici la section mise à jour du README avec des instructions d'installation détaillées :
+
 ## Installation
 
 1. **Installer Rust** :
    - Suivez les instructions sur [rust-lang.org](https://www.rust-lang.org/tools/install).
+   - Vous pouvez également installer Rust en exécutant la commande suivante dans votre terminal :
+     ```sh
+     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+     ```
+   - Une fois installé, assurez-vous que Rust est correctement configuré en exécutant :
+     ```sh
+     source $HOME/.cargo/env
+     ```
 
 2. **Installer GTK 3** :
-   - Suivez les instructions sur [GTK website](https://www.gtk.org/docs/installations/).
+   - Suivez les instructions sur le site de [GTK](https://www.gtk.org/docs/installations/).
+   - Sur les systèmes basés sur Debian/Ubuntu, vous pouvez installer GTK 3 avec la commande suivante :
+     ```sh
+     sudo apt update
+     sudo apt install -y libgtk-3-dev
+     ```
 
 3. **Installer yt-dlp** :
-   ```sh
-   pip install yt-dlp
-   ```
+   - Assurez-vous d'avoir Python 3 et pip installés. Sur les systèmes basés sur Debian/Ubuntu, vous pouvez les installer avec :
+     ```sh
+     sudo apt install -y python3 python3-pip
+     ```
+   - Ensuite, installez `yt-dlp` en utilisant pip :
+     ```sh
+     pip3 install yt-dlp
+     ```
 
-4. **Cloner le Répertoire du Projet** :
+4. **Installer Firefox** (si nécessaire) :
+   - Assurez-vous que Firefox est installé car `yt-dlp` peut nécessiter des cookies du navigateur.
+   - Sur les systèmes basés sur Debian/Ubuntu, vous pouvez installer Firefox avec :
+     ```sh
+     sudo apt install -y firefox
+     ```
+
+5. **Cloner le Répertoire du Projet** :
    ```sh
    git clone https://github.com/BenjaminPellieux/AlarmClock.git
    cd AlarmClock
    ```
 
-5. **Construire le Projet** :
+6. **Construire le Projet** :
    ```sh
    cargo build
    ```
+
+### Script d'installation automatisé
+
+Pour simplifier l'installation, vous pouvez utiliser le script **install.sh** pour installer toutes les dépendances et construire le projet :
+
+Rendez le script exécutable et exécutez-le :
+
+```sh
+chmod +x install.sh
+./install.sh
+```
+
 
 ## Utilisation
 
